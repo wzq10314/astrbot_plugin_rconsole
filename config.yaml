@@ -1,0 +1,36 @@
+# 本文件是手动配置。WebUI 配置启用 use_file_config 后才使用此文件。
+# 默认使用 WebUI 配置，避免两份配置相互覆盖。
+use_file_config: false
+admins: []  # QQ 号写为字符串，例如 ["123456789"]
+shell_enable: false
+shell_private_only: true
+# 完整命令匹配，不支持管道、重定向、通配符展开或任意 shell 语法。
+shell_allowlist:
+  - "uname -a"
+  - "python3 --version"
+  - "df -h"
+command_timeout: 8
+max_output_chars: 2000
+query_host: example.com
+query_port: 443
+
+# 三个平台的解析与发送，支持直接发送分享链接。
+media_enable: true
+media_auto_parse: true
+bilibili_enable: true
+douyin_enable: true
+xiaohongshu_enable: true
+media_groups: []  # 空列表允许所有群；填群号字符串可限制群。私聊不受此列表限制。
+media_max_size_mb: 32  # 单条内容下载总量；同时影响视频发送体积
+media_max_duration: 600
+media_max_images: 9
+media_request_timeout: 20
+media_total_timeout: 240
+media_cooldown: 10
+bilibili_quality: 32  # 16=360P，32=480P，64=720P，80=1080P，实际取决于平台权限
+# 填浏览器中你自己的完整 Cookie，不要在 QQ 群发送 Cookie。
+bilibili_cookie: ""
+bilibili_refresh_token: ""  # #RBQ 自动保存；暂不自动刷新 Cookie
+douyin_cookie: ""
+douyin_ssr_fallback: false  # 同原版：默认关闭，仅普通视频可用的免 Cookie 备用解析
+xiaohongshu_cookie: ""

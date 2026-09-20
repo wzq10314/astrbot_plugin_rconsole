@@ -1,0 +1,9 @@
+name: astrbot_plugin_rconsole
+display_name: RConsole 媒体解析
+desc: B站视频、抖音视频/图文、小红书视频/图文解析与发送，附基础诊断工具。
+version: v0.3.2
+author: wzq10314
+repo: https://github.com/wzq10314/astrbot_plugin_rconsole
+astrbot_version: ">=4.28.1,<5"
+support_platforms:
+  - aiocqhttp

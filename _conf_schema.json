@@ -1,0 +1,146 @@
+{
+  "use_file_config": {
+    "description": "使用插件目录的 config.yaml（启用后其他 WebUI 项不再生效）",
+    "type": "bool",
+    "default": false
+  },
+  "admins": {
+    "description": "插件管理员 QQ 号（字符串列表；另接受 AstrBot 管理员）",
+    "type": "list",
+    "default": []
+  },
+  "shell_enable": {
+    "description": "启用管理员诊断命令",
+    "type": "bool",
+    "default": false
+  },
+  "shell_private_only": {
+    "description": "诊断命令仅限私聊",
+    "type": "bool",
+    "default": true
+  },
+  "shell_allowlist": {
+    "description": "允许执行的完整命令（精确匹配参数，不经过 shell）",
+    "type": "list",
+    "default": [
+      "uname -a",
+      "python3 --version",
+      "df -h"
+    ]
+  },
+  "command_timeout": {
+    "description": "查询/命令超时秒数（1～30）",
+    "type": "int",
+    "default": 8
+  },
+  "max_output_chars": {
+    "description": "诊断输出字符上限（100～4000）",
+    "type": "int",
+    "default": 2000
+  },
+  "query_host": {
+    "description": "默认网络查询域名/IP",
+    "type": "string",
+    "default": "example.com"
+  },
+  "query_port": {
+    "description": "默认 TCP 端口（1～65535）",
+    "type": "int",
+    "default": 443
+  },
+  "media_enable": {
+    "description": "启用媒体解析与发送",
+    "type": "bool",
+    "default": true
+  },
+  "media_auto_parse": {
+    "description": "自动解析聊天中的分享链接或 BV 号；关闭后仍可 #rparse",
+    "type": "bool",
+    "default": true
+  },
+  "bilibili_enable": {
+    "description": "启用 B站普通视频/分P解析",
+    "type": "bool",
+    "default": true
+  },
+  "douyin_enable": {
+    "description": "启用抖音视频/图文解析",
+    "type": "bool",
+    "default": true
+  },
+  "xiaohongshu_enable": {
+    "description": "启用小红书视频/图文解析",
+    "type": "bool",
+    "default": true
+  },
+  "media_groups": {
+    "description": "允许自动/手动解析的群号字符串列表；空列表为所有群，私聊不受影响",
+    "type": "list",
+    "default": []
+  },
+  "media_max_size_mb": {
+    "description": "每条内容下载总量上限 MiB（1～64），默认32",
+    "type": "int",
+    "default": 32
+  },
+  "media_max_duration": {
+    "description": "视频时长上限秒数（1～3600）",
+    "type": "int",
+    "default": 600
+  },
+  "media_max_images": {
+    "description": "单条图集最多发送图片数（1～30）",
+    "type": "int",
+    "default": 9
+  },
+  "media_request_timeout": {
+    "description": "单次解析请求超时秒数（5～60）",
+    "type": "int",
+    "default": 20
+  },
+  "media_total_timeout": {
+    "description": "解析/下载/发送总超时秒数（30～600）",
+    "type": "int",
+    "default": 240
+  },
+  "media_cooldown": {
+    "description": "同会话同用户解析冷却秒数（0～300）",
+    "type": "int",
+    "default": 10
+  },
+  "bilibili_quality": {
+    "description": "B站画质：16=360P，32=480P，64=720P，80=1080P，受平台权限限制",
+    "type": "int",
+    "default": 32
+  },
+  "bilibili_cookie": {
+    "description": "可选：你自己的 B站完整 Cookie（单行，仅在 WebUI/YAML 配置）",
+    "type": "string",
+    "default": "",
+    "secret": true
+  },
+  "bilibili_refresh_token": {
+    "description": "B站扫码登录刷新令牌，由 #RBQ 自动保存；暂不自动刷新",
+    "type": "string",
+    "default": "",
+    "secret": true,
+    "invisible": true
+  },
+  "douyin_cookie": {
+    "description": "抖音登录 Cookie：浏览器登录后复制完整请求头 Cookie，填入并重载",
+    "type": "string",
+    "default": "",
+    "secret": true
+  },
+  "douyin_ssr_fallback": {
+    "description": "同原版：默认关闭。普通视频无 Cookie 或主接口失败时尝试分享页备用解析",
+    "type": "bool",
+    "default": false
+  },
+  "xiaohongshu_cookie": {
+    "description": "小红书登录 Cookie（必填）；还需带 xsec_token 的完整分享链接",
+    "type": "string",
+    "default": "",
+    "secret": true
+  }
+}
