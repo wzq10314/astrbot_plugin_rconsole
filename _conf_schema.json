@@ -148,6 +148,21 @@
     "description": "启用原版完整解析核心（需要 Node.js）",
     "default": true
   },
+  "engine_auto_install": {
+    "type": "bool",
+    "description": "加载插件时自动检查并安装 Node 依赖，更新依赖清单后自动重装（需要 Node.js 22+ 和 npm）",
+    "default": true
+  },
+  "engine_auto_browser": {
+    "type": "bool",
+    "description": "依赖准备后自动下载 Chromium，用于图文渲染；不会安装容器系统库",
+    "default": true
+  },
+  "engine_npm_registry": {
+    "type": "string",
+    "description": "可选 npm 镜像 HTTPS 地址，留空使用 npm 默认设置；不含账号密码",
+    "default": ""
+  },
   "engine_node": {
     "type": "string",
     "description": "Node.js 命令或可执行文件绝对路径",

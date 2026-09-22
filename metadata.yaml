@@ -1,7 +1,7 @@
 name: astrbot_plugin_rconsole
 display_name: RConsole 综合解析
 desc: 原版 RConsole 核心的 AstrBot 适配：视频图文、音乐点歌、扫码登录、微信文章总结及工具。完整功能需要 Node.js。
-version: v1.0.0
+version: v1.0.1
 author: wzq10314
 repo: https://github.com/wzq10314/astrbot_plugin_rconsole
 astrbot_version: ">=4.28.1,<5"

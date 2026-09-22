@@ -1,5 +1,5 @@
 def render() -> str:
-    return """RConsole v1.0.0 · AstrBot 完整核心适配版
+    return """RConsole v1.0.1 · AstrBot 完整核心适配版
 直接发送原版支持的平台分享链接可自动解析。
 #RBQ — B站扫码登录（仅管理员私聊）
 #RBS — B站登录状态（管理员）
@@ -25,6 +25,7 @@ def render() -> str:
 #rquery ping [域名] [端口] — TCP 连通性/耗时（管理员，非 ICMP）
 #rtools deps — 检查可选媒体工具
 #rtools engine — 检查完整核心依赖
+#rtools install — 重试自动安装依赖（管理员）
 #rtools cookies — 查看 Cookie 是否已配置（管理员，不显示内容）
 #rtools url <URL> — 识别媒体平台（不下载）
 #rshell <完整命令> — 管理员诊断命令，默认关闭且仅私聊

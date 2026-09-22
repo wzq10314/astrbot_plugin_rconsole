@@ -4,7 +4,7 @@
 
 **把 R-plugin 的视频、音乐、图文和工具带到 AstrBot**
 
-![版本](https://img.shields.io/badge/version-1.0.0-blue)
+![版本](https://img.shields.io/badge/version-1.0.1-blue)
 ![AstrBot](https://img.shields.io/badge/AstrBot-4.28.1%2B-purple)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Node](https://img.shields.io/badge/Node.js-22%2B-green)
@@ -20,7 +20,7 @@
 
 浏览量徽章是第三方计数，不等同于 GitHub 官方独立访客数。
 
-本项目是 [R-console / R-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 的 AstrBot 适配版，由 **wzq10314** 维护。1.0.0 将原版协议核心随插件打包，通过 Python 适配 AstrBot 的消息、权限、配置与 AI 服务。**不需要安装 Yunzai 或 Redis，但完整功能需要 Node.js。**
+本项目是 [R-console / R-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 的 AstrBot 适配版，由 **wzq10314** 维护。1.0.1 将原版协议核心随插件打包，通过 Python 适配 AstrBot 的消息、权限、配置与 AI 服务。**不需要安装 Yunzai 或 Redis，但完整功能需要 Node.js。**
 
 原版的 6 类应用、53 条命令路由已纳入适配范围。这表示代码和入口已接入，不代表所有第三方接口、地区网络和账号权益均已在线验证，具体见[功能对照表](FEATURE_MATRIX.md)。
 
@@ -38,26 +38,19 @@
 
 ## 安装
 
-解压完整 ZIP 到 `/AstrBot/data/plugins/astrbot_plugin_rconsole`。升级 0.3.x 也需要安装 Node 依赖，**只覆盖 Python 文件无法启用完整核心**。
+在 AstrBot 后台更新本插件，或用完整 ZIP 覆盖 `/AstrBot/data/plugins/astrbot_plugin_rconsole`，然后重载插件。保留后台配置和 plugin_data。
 
-在已安装 Node.js 22+ 的 AstrBot 容器中执行：
+**1.0.1 起默认自动安装 Node 依赖和 Chromium**：加载后在后台检查，首次下载可能需要几分钟。发送 `#rtools engine` 查看进度；看到“原版核心依赖已就绪”后直接重发链接，无需再次重载。失败后管理员可发送 `#rtools install` 重试。依赖清单未变化且完整性检查通过时，不重复运行 npm ci。
 
-```bash
-cd /AstrBot/data/plugins/astrbot_plugin_rconsole
-python3 -m pip install -r requirements.txt
-cd engine
-npm ci
-npx playwright install --with-deps chromium
-```
-
-媒体处理需要 ffmpeg / ffprobe，YouTube 等还需要 yt-dlp。首次安装、Docker 持久化和可选工具见 [INSTALL.md](INSTALL.md)。
+容器仍须预先具备 **Node.js 22+ 和 npm**；系统工具 ffmpeg / ffprobe、Chromium 系统库和可选 yt-dlp 请按 [INSTALL.md](INSTALL.md) 或 Dockerfile 准备。通过 AstrBot 插件管理器安装 Python requirements.txt；手工复制安装的用户需在 AstrBot 的 Python 环境执行 `python3 -m pip install -r requirements.txt`。
 
 ## 常用命令
 
 ```text
 #rhelp                        文字帮助
 #R帮助                        原版图文菜单
-#rtools engine                检查依赖
+#rtools engine                查看依赖准备进度
+#rtools install               重试安装依赖（管理员）
 #RBQ / #RBS                   B站扫码 / 状态
 #rnq / #rncq                  网易云 / 云盘扫码
 #rns / #rncs                  网易云 / 云盘状态

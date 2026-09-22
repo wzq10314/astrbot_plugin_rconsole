@@ -13,10 +13,10 @@ class ProcessResult:
     truncated: bool = False
 
 
-async def run_process(argv: list[str], timeout: float, limit: int) -> ProcessResult:
+async def run_process(argv: list[str], timeout: float, limit: int, *, cwd=None, env=None) -> ProcessResult:
     proc = await asyncio.create_subprocess_exec(
         *argv, stdin=asyncio.subprocess.DEVNULL, stdout=asyncio.subprocess.PIPE,
-        stderr=asyncio.subprocess.STDOUT, start_new_session=(os.name == "posix"),
+        stderr=asyncio.subprocess.STDOUT, start_new_session=(os.name == "posix"), cwd=cwd, env=env,
     )
     captured = bytearray()
     truncated = False

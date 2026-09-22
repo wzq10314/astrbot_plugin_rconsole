@@ -107,10 +107,14 @@ class EngineHost:
         if route['fnc'] in {'pickSong','playSong'} and config.get('songRequestPlatform') == 'netease' and not config.get('neteaseCloudAPIServer'):
             raise MediaError('网易云点歌需要先配置 neteaseCloudAPIServer，也可以将 songRequestPlatform 改为 qq 或 kugou。')
         if self.lock.locked(): raise MediaError('完整解析核心正在处理请求，请稍后重试。')
+        if self.plugin.dependencies.started and not self.plugin.dependencies.ready:
+            raise MediaError(self.plugin.dependencies.message)
         if not shutil.which(self.plugin.settings.get('engine_node') or 'node'):
             raise MediaError('缺少 Node.js，请按 INSTALL.md 安装 Node.js 22，再安装 engine 中的依赖。')
         if not (ENGINE / 'node_modules/axios/package.json').exists():
-            raise MediaError('原版核心依赖尚未安装：请在插件 engine 目录运行 npm ci，然后重载插件。')
+            if self.plugin.settings['engine_auto_install']:
+                raise MediaError(self.plugin.start_dependency_install())
+            raise MediaError('已关闭自动安装。管理员发送 #rtools install 安装依赖，或在插件 engine 目录运行 npm ci。')
         key = (str(event.unified_msg_origin), str(event.get_sender_id()))
         now = time.monotonic()
         if now - self.recent.get(key, -1000) < self.plugin.settings['media_cooldown']:

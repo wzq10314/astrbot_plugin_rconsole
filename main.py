@@ -20,9 +20,11 @@ from .services.pipeline import parse_and_send
 from .services.bilibili_login import create_login, poll_login
 from .utils.http import PublicHTTP
 from .services.engine import EngineHost
+from .services.dependencies import EngineDependencies
+from .services.engine import ENGINE
 
 
-@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.0")
+@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.1")
 class RConsolePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -36,9 +38,13 @@ class RConsolePlugin(Star):
         self.raw_config = config
         self.bili_login_lock = asyncio.Lock()
         self.engine = EngineHost(self)
+        self.dependencies = EngineDependencies(self.settings, ENGINE)
+        self.install_task = None
         self.scheduler = None
 
     async def initialize(self):
+        if self.settings['engine_enable'] and self.settings['engine_auto_install']:
+            self.start_dependency_install()
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
         from apscheduler.triggers.cron import CronTrigger
         expression = self.engine.configuration().get('autoclearTrashtime', '0 0 8 * * *').replace('?', '*')
@@ -53,6 +59,28 @@ class RConsolePlugin(Star):
         self.scheduler = AsyncIOScheduler()
         self.scheduler.add_job(self.clean_engine_cache, trigger, max_instances=1, coalesce=True)
         self.scheduler.start()
+
+    def start_dependency_install(self, *, force=False):
+        if self.install_task and not self.install_task.done():
+            return '依赖准备正在进行，请用 #rtools engine 查看状态。'
+        if self.engine.lock.locked():
+            return '正在解析媒体，请等本次处理结束后再安装依赖。'
+        self.dependencies.started = True
+        self.dependencies.ready = False
+        self.dependencies.message = '正在准备自动安装依赖…'
+        async def prepare():
+            try:
+                await self.dependencies.ensure(force=force)
+                logger.info('RConsole: %s %s', self.dependencies.message, self.dependencies.browser_message)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:
+                self.dependencies.message = '依赖准备异常，请发送 #rtools install 重试。'
+                logger.warning('RConsole dependency setup failed: %s',type(exc).__name__)
+        self.install_task = asyncio.create_task(prepare())
+        self.tasks.add(self.install_task)
+        self.install_task.add_done_callback(self.tasks.discard)
+        return '已开始后台安装依赖，请用 #rtools engine 查看进度。完成后直接重发链接，无需重载。'
 
     async def clean_engine_cache(self):
         if self.engine.lock.locked(): return
@@ -271,11 +299,14 @@ class RConsolePlugin(Star):
         if command == "status":
             return status.render(self.started)
         if command == "tools":
+            if argument.strip() == 'install':
+                if not is_admin(event, self.settings):
+                    return '安装依赖仅管理员可操作。'
+                return self.start_dependency_install(force=True)
             if argument.strip() == 'engine':
                 import shutil
-                from .services.engine import ENGINE
-                deps = '\n'.join(f"{name}：{'已安装' if shutil.which(name) else '未安装'}" for name in ('node','ffmpeg','ffprobe','yt-dlp','BBDown','tdl','freyr'))
-                return '完整核心：53 条原版路由\n' + deps + '\nNode 依赖：' + ('已安装' if (ENGINE/'node_modules/axios/package.json').exists() else '未安装，请在 engine 目录 npm ci')
+                deps = '\n'.join(f"{name}：{'已安装' if shutil.which(self.settings['engine_node'] if name == 'node' else name) else '未安装'}" for name in ('node','npm','ffmpeg','ffprobe','yt-dlp','BBDown','tdl','freyr'))
+                return '完整核心：53 条原版路由\n' + deps + '\n依赖准备：' + self.dependencies.message + '\n' + self.dependencies.browser_message
             if argument.strip() == 'cookies':
                 if not is_admin(event, self.settings):
                     return 'Cookie 配置状态仅管理员可查看。'

@@ -3,6 +3,9 @@ import yaml
 
 DEFAULTS = {
     "engine_enable": True,
+    "engine_auto_install": True,
+    "engine_auto_browser": True,
+    "engine_npm_registry": "",
     "engine_node": "node",
     "engine_timeout": 300,
     "upstream": {},
@@ -83,4 +86,11 @@ def load_config(config, root: Path) -> dict:
         raise ValueError('upstream 必须为配置对象')
     if not isinstance(result['engine_node'], str) or not result['engine_node'].strip():
         raise ValueError('engine_node 必须为 Node 可执行文件路径')
+    from urllib.parse import urlsplit
+    registry = result['engine_npm_registry']
+    if not isinstance(registry,str): raise ValueError('engine_npm_registry 必须为字符串')
+    if registry.strip():
+        url=urlsplit(registry.strip())
+        if url.scheme!='https' or not url.hostname or url.username or url.password or url.query or url.fragment or any(ord(c)<33 for c in registry.strip()):
+            raise ValueError('engine_npm_registry 必须是无账号密码的 HTTPS 地址')
     return result

@@ -30,12 +30,12 @@ export default class Help extends Base {
         const versionData = config.getConfig('version')
 
         const version =
-            (versionData && versionData.length && versionData[0].version) || '1.0.0'
+            (versionData && versionData.length && versionData[0].version) || '1.0.1'
 
         return {
             ...this.screenData,
             saveId: 'help',
-            version: '1.0.0',
+            version: '1.0.1',
             helpData
         }
     }

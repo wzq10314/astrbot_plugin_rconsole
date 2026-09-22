@@ -30,6 +30,9 @@ douyin_cookie: ''
 douyin_ssr_fallback: false
 xiaohongshu_cookie: ''
 engine_enable: true
+engine_auto_install: true
+engine_auto_browser: true
+engine_npm_registry: ''
 engine_node: node
 engine_timeout: 300
 upstream:

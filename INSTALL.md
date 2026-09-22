@@ -1,4 +1,4 @@
-# 安装与升级 RConsole 1.0.0
+# 安装与升级 RConsole 1.0.1
 
 适用于 AstrBot 4.28.1、Python 3.12、OneBot11 / NapCat；以下沿用你的容器名 `astrbot`。
 
@@ -21,42 +21,44 @@ npm --version
 需要 Node.js 22+。如果没有，推荐使用本包 `Dockerfile.rconsole` 制作持久化镜像：在宿主机插件文件夹运行下面命令，将参数替换为你当前使用的 AstrBot 镜像及标签。
 
 ```bash
-docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标签 -t astrbot-rconsole:1.0.0 .
+docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标签 -t astrbot-rconsole:1.0.1 .
 ```
 
-把原 Compose 中 AstrBot 的 `image` 改为 `astrbot-rconsole:1.0.0`，保留原端口、网络和 `/AstrBot/data` 挂载，重新创建容器。此 Dockerfile 适用于 Debian/Ubuntu 基础镜像。
+把原 Compose 中 AstrBot 的 `image` 改为 `astrbot-rconsole:1.0.1`，保留原端口、网络和 `/AstrBot/data` 挂载，重新创建容器。此 Dockerfile 适用于 Debian/Ubuntu 基础镜像。
 
-## 3. 安装依赖
+## 3. 自动安装插件依赖
 
-以下在 **AstrBot 容器内**执行，已有 Node 的用户直接从这里开始：
+1. 在 AstrBot 后台更新或安装完整插件；已有安装请重载一次。通过插件管理器安装 Python requirements.txt；手工复制的用户请使用 AstrBot 实际运行的 Python 执行 `python3 -m pip install -r requirements.txt`。
+2. 默认开启 `engine_auto_install`，加载时会在后台执行锁定版本的 `npm ci`，安装后检查依赖是否可以加载；依赖清单、Node 主版本或系统变化时重新准备。安装期间普通媒体请求会返回进度。
+3. 默认开启 `engine_auto_browser`，继续自动下载用于图文渲染的 Chromium。核心依赖就绪后即可发送媒体链接，不用等待浏览器下载完成。
+4. 发送 `#rtools engine` 查看结果。失败时管理员发送 `#rtools install` 重试，无需进容器手工运行 npm。卸载或重载会停止当前安装，下次加载重新检查。
+
+自动安装需要插件目录和 npm 缓存可写、容器能访问 npm 下载服务。下载缓慢时，可在后台 `engine_npm_registry` 填你信任的 HTTPS npm 镜像地址，再重试；留空沿用 npm 默认配置。每个安装阶段最多等待 10 分钟。
+
+### 容器系统依赖（仍需准备一次）
+
+插件不自动执行 apt 或修改系统权限。推荐使用附带的 Dockerfile；手工准备时在容器执行：
 
 ```bash
 apt-get update
 apt-get install -y ffmpeg git fonts-noto-cjk
-cd /AstrBot/data/plugins/astrbot_plugin_rconsole
-python3 -m pip install -r requirements.txt
 python3 -m pip install -U yt-dlp
-cd engine
-npm ci
-npx playwright install --with-deps chromium
 ```
 
-使用 AstrBot 实际运行的 Python；如果镜像采用虚拟环境，就使用该环境的 Python。Chromium 用于菜单、歌曲列表、评论图片与元宝浏览器模式；普通渲染失败会尝试文字输出。
+Node.js 22+ 和 npm 按第 2 节准备。Chromium 自动下载不包含 Linux 系统库；如果图片渲染提示缺少系统库，在核心依赖就绪后进入插件 `engine` 目录执行 `npx playwright install-deps chromium`，然后重载。Chromium 用于菜单、歌曲列表、评论图片与元宝浏览器模式；普通渲染失败会尝试文字输出。
 
-退出容器，在宿主机重启：
+如果主动关闭自动安装，可按原方式在 `engine` 目录执行 `npm ci` 和 `npx playwright install --with-deps chromium`。不要把 Windows 的 node_modules 复制到 Linux。
 
-```bash
-exit
-docker restart astrbot
-```
-
-手工安装在容器系统中的依赖会随重建丢失。Dockerfile 已包含 Node、ffmpeg、yt-dlp 和中文字体；重建后还要检查插件 Python/Node 依赖及 Chromium。可将 Playwright 缓存目录另行挂载持久化，或重复安装 Chromium。
+容器系统依赖随重建可能丢失；Dockerfile 包含 Node/npm、ffmpeg、yt-dlp 和中文字体。插件依赖重建后会自动检查补齐。Playwright 缓存可另行挂载持久化，避免重复下载。
 
 ## 4. 设置与登录
 
 后台 → 插件 → RConsole → 配置，保存后重载。
 
 - `engine_enable`：开启完整核心；关闭后使用保留的三平台原生解析。
+- `engine_auto_install`：默认开启，后台自动准备 Node 依赖。
+- `engine_auto_browser`：默认开启，核心就绪后下载 Chromium。
+- `engine_npm_registry`：可选 npm 镜像 HTTPS 地址。
 - `engine_node`：默认 node，可填写可执行文件绝对路径。
 - `engine_timeout`：单次处理超时 60～600 秒，默认 300。
 - `media_groups`：留空允许所有群；填写 QQ 群号列表限制范围。
