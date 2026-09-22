@@ -365,7 +365,8 @@ class MediaTests(unittest.IsolatedAsyncioTestCase):
             with self.assertRaisesRegex(MediaError, '发送失败'): await OneBotSender(event).file(file, 'video')
 
     async def test_media_entry_auto_and_explicit(self):
-        plugin = RConsolePlugin(None, {'media_cooldown': 0})
+        # Exercise the retained native fallback independently of the new engine.
+        plugin = RConsolePlugin(None, {'media_cooldown': 0, 'engine_enable': False})
         with patch('astrbot_plugin_rconsole.main.parse_and_send', AsyncMock()) as handler:
             event = Event('https://v.douyin.com/test')
             self.assertEqual([x async for x in plugin.on_media(event)], [])
@@ -373,7 +374,7 @@ class MediaTests(unittest.IsolatedAsyncioTestCase):
             self.assertTrue(event.stopped)
             await anext_or_empty(plugin.on_media(Event('https://v.douyin.com/test')))
             handler.assert_awaited_once()  # duplicate suppressed
-        plugin = RConsolePlugin(None, {'media_auto_parse': False})
+        plugin = RConsolePlugin(None, {'media_auto_parse': False, 'engine_enable': False})
         with patch('astrbot_plugin_rconsole.main.parse_and_send', AsyncMock()) as handler:
             await anext_or_empty(plugin.on_media(Event('https://v.douyin.com/test')))
             handler.assert_not_awaited()

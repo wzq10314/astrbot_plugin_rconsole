@@ -19,9 +19,10 @@ from .services.models import MediaError
 from .services.pipeline import parse_and_send
 from .services.bilibili_login import create_login, poll_login
 from .utils.http import PublicHTTP
+from .services.engine import EngineHost
 
 
-@register("astrbot_plugin_rconsole", "RConsole Port Contributors", "B站、抖音、小红书解析与基础工具", "0.3.2")
+@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.0")
 class RConsolePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -34,8 +35,36 @@ class RConsolePlugin(Star):
         self.media_duplicates = OrderedDict()
         self.raw_config = config
         self.bili_login_lock = asyncio.Lock()
+        self.engine = EngineHost(self)
+        self.scheduler = None
+
+    async def initialize(self):
+        from apscheduler.schedulers.asyncio import AsyncIOScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        expression = self.engine.configuration().get('autoclearTrashtime', '0 0 8 * * *').replace('?', '*')
+        fields = str(expression).split()
+        if len(fields) == 6:
+            trigger = CronTrigger(**dict(zip(('second','minute','hour','day','month','day_of_week'),fields)))
+        elif len(fields) == 5:
+            trigger = CronTrigger.from_crontab(expression)
+        else:
+            logger.warning('RConsole: 自动清理 cron 格式无效，未启用定时清理。')
+            return
+        self.scheduler = AsyncIOScheduler()
+        self.scheduler.add_job(self.clean_engine_cache, trigger, max_instances=1, coalesce=True)
+        self.scheduler.start()
+
+    async def clean_engine_cache(self):
+        if self.engine.lock.locked(): return
+        root = (self.engine.data / 'runtime').resolve()
+        if not root.exists(): return
+        for item in root.rglob('*'):
+            if item.is_file() and not item.is_symlink(): item.unlink(missing_ok=True)
 
     async def terminate(self):
+        if self.scheduler:
+            self.scheduler.shutdown(wait=False)
+        await self.engine.close()
         tasks = list(self.tasks)
         for task in tasks:
             task.cancel()
@@ -114,6 +143,46 @@ class RConsolePlugin(Star):
         text = event_text(event).strip()
         # The tools URL inspection command must not also trigger a download.
         if parse_command(event.get_message_str()) is not None:
+            return
+        route = self.engine.match(text) if self.settings['engine_enable'] else None
+        # Keep the tested native Bili QR and XHS codec fallback; all other upstream
+        # routes use the bundled core, including Bili articles/live/music/comments.
+        if route and route['fnc'] == 'biliScan':
+            return
+        if route and route['fnc'] != 'xhs':
+            if not self.settings['media_enable']:
+                if text.startswith('#'):
+                    yield event.plain_result('媒体解析已关闭。')
+                    event.stop_event()
+                return
+            explicit_command = text.startswith('#') or not ('http://' in text or 'https://' in text)
+            if not explicit_command and not self.settings['media_auto_parse']:
+                return
+            groups = self.settings['media_groups']
+            if groups and event.get_group_id() and str(event.get_group_id()) not in groups:
+                return
+            if str(event.get_sender_id()) == str(getattr(event.message_obj,'self_id','')):
+                return
+            platform_key = {'bili':'bilibili_enable','douyin':'douyin_enable'}.get(route['fnc'])
+            if platform_key and not self.settings[platform_key]:
+                if explicit_command:
+                    yield event.plain_result('该平台的媒体解析已关闭。')
+                    event.stop_event()
+                return
+            task = asyncio.current_task()
+            if task: self.tasks.add(task)
+            try:
+                await self.engine.execute(event,text)
+            except MediaError as exc:
+                yield event.plain_result(str(exc))
+            except TimeoutError:
+                yield event.plain_result('解析超时，任务已停止。请检查接口或适当提高 engine_timeout。')
+            except Exception as exc:
+                logger.warning('RConsole engine failed: %s',type(exc).__name__)
+                yield event.plain_result('解析适配失败，请运行 #rtools engine 检查运行环境。')
+            finally:
+                if task: self.tasks.discard(task)
+                event.stop_event()
             return
         explicit = bool(EXPLICIT_PATTERN.match(text))
         if not explicit and not self.settings['media_auto_parse']:
@@ -202,6 +271,11 @@ class RConsolePlugin(Star):
         if command == "status":
             return status.render(self.started)
         if command == "tools":
+            if argument.strip() == 'engine':
+                import shutil
+                from .services.engine import ENGINE
+                deps = '\n'.join(f"{name}：{'已安装' if shutil.which(name) else '未安装'}" for name in ('node','ffmpeg','ffprobe','yt-dlp','BBDown','tdl','freyr'))
+                return '完整核心：53 条原版路由\n' + deps + '\nNode 依赖：' + ('已安装' if (ENGINE/'node_modules/axios/package.json').exists() else '未安装，请在 engine 目录 npm ci')
             if argument.strip() == 'cookies':
                 if not is_admin(event, self.settings):
                     return 'Cookie 配置状态仅管理员可查看。'

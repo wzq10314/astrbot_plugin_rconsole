@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {commandArgs,execFile} from './safe-process.mjs';
+import {promisify} from 'node:util';
+import {installNetwork} from './network.mjs';
+import http from 'node:http';
+assert.deepEqual(commandArgs('ffmpeg -i "file with spaces.mp4" -c copy out.mp4'),['ffmpeg','-i','file with spaces.mp4','-c','copy','out.mp4']);
+for(const value of ['ffmpeg x; rm -rf /','ffmpeg "$(id)"','ffmpeg `id`','bash -c id','ffmpeg x | sh'])assert.throws(()=>commandArgs(value));
+const result=await promisify(execFile)(process.execPath,['-e','process.stdout.write("ok")'],{});
+assert.equal(result.stdout,'ok');
+installNetwork({});
+assert.throws(()=>http.get('http://127.0.0.1/'));
+assert.throws(()=>http.get('http://169.254.169.254/'));
+assert.throws(()=>http.get('http://[::1]/'));
+console.log('Runtime checks passed: command parsing, execFile contract, local network denial');

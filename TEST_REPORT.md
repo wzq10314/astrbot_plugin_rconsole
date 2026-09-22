@@ -1,3 +1,24 @@
+# 1.0.0 完整核心适配验证
+
+日期：2026-09-22。源码依据：7e1f0eed107e1c5181baec6fc83d3a9fdb6a1eef。
+
+- 52 项 Python 测试通过，包括原有 42 项回归与 10 项核心适配测试。
+- 使用真实 Node 子进程加载上游全部 6 类应用、53 条路由；所有 Python/JavaScript 文件通过语法检查。
+- 真实 Node 核心对接本地模拟网易云 API：搜索、用户隔离、二维码 PNG 发送、轮询成功保存 Cookie、播放后音频下载、跨消息文件上传。
+- 真实 Playwright Chromium 渲染完整帮助菜单成功，已目视检查文字、布局与新增命令。
+- 已测试管理员/私聊限制、音乐卡片群私聊转换、合并转发、输出凭据隐藏、路径边界和退出清理。
+- 已验证文章总结入口在未配置单独 AI Key 时使用 AstrBot 宿主回调，网页内容作为不可信数据传入模型。
+- Node 运行时测试：无 shell 命令解析、命令替换/管道拒绝、execFile Promise 返回结构、非公网 HTTP 目标拒绝。
+- 配置字段默认无个人凭据；发行包排除 node_modules、测试运行数据、登录态、.git 与 Python 缓存。
+
+**验证范围**：AstrBot 和 NapCat 发送使用测试替身；网易云服务使用本地兼容 API 测试数据。未用真实账号扫码，没有声称所有平台当前在线可用。Chromium 在 Windows 开发环境实测；用户 Linux 容器、Dockerfile、BBDown/tdl/freyr 以及真实第三方接口需按 INSTALL.md 配置后逐项验收。
+
+复现 Python 测试：安装 requirements.txt、engine 中 npm ci，并设置 RCONSOLE_TEST_NODE（可选）后，令 PYTHONPATH 指向包含插件目录的父目录，运行 `python -m unittest discover -s tests -q`。Node 检查运行 `node engine/test-runtime.mjs`。不要使用真实账号 Cookie 运行夹具测试。
+
+以下为旧版历史记录，不能代替上述新版本验证边界。
+
+---
+
 # v0.3.2 发布验证
 
 本次发布重新运行42项测试全部通过，使用真实aiohttp、PyYAML与Node.js签名子进程；AstrBot、平台网络与QQ发送为测试替身。以下为历次验证记录，不代表当前所有线上链接已实测。

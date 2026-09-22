@@ -3,3 +3,8 @@ __pycache__/
 .venv/
 .env
 *.sqlite*
+node_modules/
+data/
+runtime/
+*.log
+.npm/

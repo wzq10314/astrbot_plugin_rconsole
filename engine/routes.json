@@ -1,0 +1,285 @@
+[
+  {
+    "app": "help",
+    "reg": "^#*(R|r)(插件)?(命令|帮助|菜单|help|说明|功能|指令|使用说明)$",
+    "fnc": "help"
+  },
+  {
+    "app": "query",
+    "reg": "^#医药查询(.*)$",
+    "fnc": "doctor"
+  },
+  {
+    "app": "query",
+    "reg": "^#cat$",
+    "fnc": "cat"
+  },
+  {
+    "app": "query",
+    "reg": "^#推荐软件$",
+    "fnc": "softwareRecommended"
+  },
+  {
+    "app": "query",
+    "reg": "^#买家秀$",
+    "fnc": "buyerShow"
+  },
+  {
+    "app": "query",
+    "reg": "^#累了$",
+    "fnc": "cospro"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#点歌\\s*(.+?)(?:\\s+([12]))?$|#听[1-9][0-9]*|#听[1-9]*$",
+    "fnc": "pickSong"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#播放\\s*(.+?)(?:\\s+([12]))?$",
+    "fnc": "playSong"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#?上传$",
+    "fnc": "upLoad"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#?我的云盘$|^#rnc$|^#RNC$",
+    "fnc": "myCloud",
+    "permission": "master"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#?云盘更新$|#?更新云盘$",
+    "fnc": "songCloudUpdate",
+    "permission": "master"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#?上传云盘|#?上传网盘$|#rnu|#RNU",
+    "fnc": "uploadCloud",
+    "permission": "master"
+  },
+  {
+    "app": "songRequest",
+    "reg": "^#?清除云盘缓存$",
+    "fnc": "cleanCloudData",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^#设置海外解析$",
+    "fnc": "setOversea",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^清理垃圾$",
+    "fnc": "clearTrash",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^#设置R信任用户(.*)",
+    "fnc": "setWhiteList",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^#R信任用户$",
+    "fnc": "getWhiteList",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^#查询R信任用户(.*)",
+    "fnc": "searchWhiteList",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^#删除R信任用户(.*)",
+    "fnc": "deleteWhiteList",
+    "permission": "master"
+  },
+  {
+    "app": "switchers",
+    "reg": "^#设置视频号[Cc]ookie\\s*(.*)$",
+    "fnc": "setWeixinChannelCookie",
+    "permission": "master"
+  },
+  {
+    "app": "tools",
+    "reg": "^(翻|trans)[中|日|文|英|俄|韩]",
+    "fnc": "trans"
+  },
+  {
+    "app": "tools",
+    "reg": "((v|live).douyin.com|webcast.amemv.com|iesdouyin.com|www.douyin.com/(video|note|live|share|jingxuan|discover))",
+    "fnc": "douyin"
+  },
+  {
+    "app": "tools",
+    "reg": "(www.tiktok.com)|(vt.tiktok.com)|(vm.tiktok.com)",
+    "fnc": "tiktok"
+  },
+  {
+    "app": "tools",
+    "reg": "^#(RBQ|rbq)$",
+    "fnc": "biliScan",
+    "permission": "master"
+  },
+  {
+    "app": "tools",
+    "reg": "^#(RBS|rbs)$",
+    "fnc": "biliState",
+    "permission": "master"
+  },
+  {
+    "app": "tools",
+    "reg": "(bilibili.com|b23.tv|bili2233.cn|m.bilibili.com|t.bilibili.com|^BV[1-9a-zA-Z]{10}$)",
+    "fnc": "bili"
+  },
+  {
+    "app": "tools",
+    "reg": "https?:\\/\\/(x|r|twitter)\\.com\\/[0-9-a-zA-Z_]{1,20}\\/status\\/([0-9]*)(\\?.*)?",
+    "fnc": "twitter_x"
+  },
+  {
+    "app": "tools",
+    "reg": "https?:\\/\\/(www\\.)?instagram\\.com\\/(p|reel|reels)\\/",
+    "fnc": "instagram"
+  },
+  {
+    "app": "tools",
+    "reg": "(acfun.cn|^ac[0-9]{8}$)",
+    "fnc": "acfun"
+  },
+  {
+    "app": "tools",
+    "reg": "(xhslink\\.(com|cn)|xiaohongshu\\.com)",
+    "fnc": "xhs"
+  },
+  {
+    "app": "tools",
+    "reg": "(h5app.kuwo.cn)",
+    "fnc": "bodianMusic"
+  },
+  {
+    "app": "tools",
+    "reg": "(chenzhongtech.com|kuaishou.com|ixigua.com|h5.pipix.com|h5.pipigx.com|s.xsj.qq.com|m.okjike.com)",
+    "fnc": "general"
+  },
+  {
+    "app": "tools",
+    "reg": "(youtube.com|youtu.be|music.youtube.com)",
+    "fnc": "sy2b"
+  },
+  {
+    "app": "tools",
+    "reg": "(miyoushe.com)",
+    "fnc": "miyoushe"
+  },
+  {
+    "app": "tools",
+    "reg": "(music.163.com|163cn.tv)",
+    "fnc": "netease"
+  },
+  {
+    "app": "tools",
+    "reg": "(weibo.com|m.weibo.cn)",
+    "fnc": "weibo"
+  },
+  {
+    "app": "tools",
+    "reg": "(weishi.qq.com)",
+    "fnc": "weishi"
+  },
+  {
+    "app": "tools",
+    "reg": "share.xiaochuankeji.cn",
+    "fnc": "zuiyou"
+  },
+  {
+    "app": "tools",
+    "reg": "(music.apple.com|open.spotify.com)",
+    "fnc": "freyr"
+  },
+  {
+    "app": "tools",
+    "reg": "(^#总结一下\\s*(http|https):\\/\\/.*|mp.weixin.qq.com|arxiv.org|sspai.com|chinadaily.com.cn|zhihu.com|github.com|v2ex.com)",
+    "fnc": "linkShareSummary"
+  },
+  {
+    "app": "tools",
+    "reg": "(y.qq.com)",
+    "fnc": "qqMusic"
+  },
+  {
+    "app": "tools",
+    "reg": "(t1.kugou.com|m.kugou.com/share/song.html|www.kugou.com/share/|h5.kugou.com/v2/)",
+    "fnc": "kugouMusic"
+  },
+  {
+    "app": "tools",
+    "reg": "(qishui.douyin.com)",
+    "fnc": "qishuiMusic"
+  },
+  {
+    "app": "tools",
+    "reg": "https:\\/\\/t\\.me\\/(?:c\\/\\d+\\/\\d+\\/\\d+|c\\/\\d+\\/\\d+|\\w+\\/\\d+\\/\\d+|\\w+\\/\\d+\\?\\w+=\\d+|\\w+\\/\\d+)",
+    "fnc": "aircraft"
+  },
+  {
+    "app": "tools",
+    "reg": "tieba.baidu.com",
+    "fnc": "tieba"
+  },
+  {
+    "app": "tools",
+    "reg": "xiaoheihe.cn",
+    "fnc": "xiaoheihe"
+  },
+  {
+    "app": "tools",
+    "reg": "(weixin\\.qq\\.com/sph/)",
+    "fnc": "weixinChannel"
+  },
+  {
+    "app": "tools",
+    "reg": "^#(网易云状态|rns|RNS|网易云云盘状态|rncs|RNCS)$",
+    "fnc": "neteaseStatus",
+    "permission": "master"
+  },
+  {
+    "app": "tools",
+    "reg": "^#(rnq|RNQ|rncq|RNCQ)$",
+    "fnc": "netease_scan",
+    "permission": "master"
+  },
+  {
+    "app": "tools",
+    "reg": "^#(酷狗状态|rks|RKS)$",
+    "fnc": "kugouStatus",
+    "permission": "master"
+  },
+  {
+    "app": "tools",
+    "reg": "^#(rkq|RKQ)$",
+    "fnc": "kugou_scan",
+    "permission": "master"
+  },
+  {
+    "app": "update",
+    "reg": "^#*R(插件)?版本$",
+    "fnc": "version"
+  },
+  {
+    "app": "update",
+    "reg": "^#*R(插件)?(强制更新|更新)$",
+    "fnc": "update",
+    "permission": "master"
+  }
+]

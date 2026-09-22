@@ -2,6 +2,10 @@ from pathlib import Path
 import yaml
 
 DEFAULTS = {
+    "engine_enable": True,
+    "engine_node": "node",
+    "engine_timeout": 300,
+    "upstream": {},
     "use_file_config": False,
     "admins": [],
     "shell_enable": False,
@@ -44,6 +48,10 @@ def load_config(config, root: Path) -> dict:
         if old in values and new not in values:
             values[new] = values[old]
     result = {**DEFAULTS, **values}
+    upstream = result.get('upstream')
+    if isinstance(upstream, dict):
+        for old,new in {'douyinCookie':'douyin_cookie','xiaohongshuCookie':'xiaohongshu_cookie'}.items():
+            if not result.get(new) and upstream.get(old): result[new]=upstream[old]
     for name in (key for key, value in DEFAULTS.items() if type(value) is bool):
         if not isinstance(result[name], bool):
             raise ValueError(f"{name} 必须是布尔值 true/false")
@@ -57,7 +65,8 @@ def load_config(config, root: Path) -> dict:
     for name, minimum, maximum in (
         ("command_timeout", 1, 30), ("max_output_chars", 100, 4000), ("query_port", 1, 65535),
         ("media_max_size_mb", 1, 64), ("media_max_duration", 1, 3600), ("media_max_images", 1, 30),
-        ("media_request_timeout", 5, 60), ("media_total_timeout", 30, 600), ("media_cooldown", 0, 300)
+        ("media_request_timeout", 5, 60), ("media_total_timeout", 30, 600), ("media_cooldown", 0, 300),
+        ("engine_timeout", 60, 600)
     ):
         value = result[name]
         if type(value) is not int or not minimum <= value <= maximum:
@@ -70,4 +79,8 @@ def load_config(config, root: Path) -> dict:
         if not isinstance(result[name], str) or '\r' in result[name] or '\n' in result[name]:
             raise ValueError(f'{name} 必须为单行 Cookie 字符串')
         result[name] = result[name].strip()
+    if not isinstance(result['upstream'], dict):
+        raise ValueError('upstream 必须为配置对象')
+    if not isinstance(result['engine_node'], str) or not result['engine_node'].strip():
+        raise ValueError('engine_node 必须为 Node 可执行文件路径')
     return result

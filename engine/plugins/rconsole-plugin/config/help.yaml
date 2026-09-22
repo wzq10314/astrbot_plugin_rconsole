@@ -1,0 +1,121 @@
+- group: 查询类功能
+  list:
+  - icon: doctor
+    title: '#医药查询 疾病/症状/医院/医生/药品'
+    desc: 便利的医药查询功能
+  - icon: cat
+    title: '#cat 开始吸猫'
+    desc: 猫咪图捕捉
+  - icon: computer
+    title: '#推荐软件'
+    desc: 推荐PC、Android软件
+  - icon: buyer
+    title: '#买家秀'
+    desc: 淘宝买家秀
+  - icon: pic1
+    title: '#累了'
+    desc: 疲惫往往是过度劳累
+- group: 工具类合集
+  list:
+  - icon: translate
+    title: 翻中/英/日 xxx
+    desc: R插件翻译引擎
+  - icon: tiktok
+    title: douyin
+    desc: 抖音分享实时下载
+  - icon: bilibili
+    title: 哔哩哔哩
+    desc: 哔哩哔哩分享实时下载
+  - icon: bqrcode
+    title: '#rbq/#RBQ'
+    desc: R插件B站扫码
+  - icon: applemusic
+    title: Apple Music
+    desc: Apple Music音乐分享实时下载
+  - icon: youtube
+    title: 油管
+    desc: 油管学习版分享实时下载
+  - icon: twitter
+    title: 小蓝鸟
+    desc: 推特学习版分享实时下载
+  - icon: acfun
+    title: acfun
+    desc: 猴山分享实时下载
+  - icon: redbook
+    title: 小红书
+    desc: 小红书分享实时下载
+  - icon: kuaishou
+    title: 快手（测试阶段）
+    desc: 快手分享实时下载
+  - icon: xigua
+    title: 西瓜（测试阶段）
+    desc: 西瓜分享实时下载
+  - icon: miyoushe
+    title: 米游社
+    desc: 米游社文章分享实时下载
+  - icon: weibo
+    title: 微博
+    desc: 微博文章分享实时下载
+  - icon: zuiyou
+    title: 最右（测试阶段）
+    desc: 最右分享实时下载
+  - icon: pipi
+    title: 皮皮虾（测试阶段）
+    desc: 皮皮虾分享实时下载
+  - icon: bodian
+    title: 波点音乐
+    desc: 波点云音乐点解析
+  - icon: spotify
+    title: Spotify
+    desc: 解析Spotify音乐
+  - icon: telegram
+    title: 小飞机（学习版）
+    desc: 解析小飞机
+  - icon: xiaoheihe
+    title: 小黑盒
+    desc: 小黑盒分享实时下载
+- group: 其他指令
+  list:
+  - icon: update
+    title: '#R插件更新'
+    desc: 进行更新R插件
+- group: 音乐与登录
+  list:
+  - icon: computer
+    title: '#点歌 关键词 / #听1 / #播放 关键词'
+    desc: 网易云、QQ音乐、酷狗；参数2为网易云播客
+  - icon: computer
+    title: '#rnq / #rncq / #rkq'
+    desc: 管理员私聊扫码：网易云、云盘、酷狗
+  - icon: computer
+    title: '#rns / #rncs / #rks / #RBS'
+    desc: 查询对应登录状态
+  - icon: computer
+    title: '#我的云盘 / #云盘更新 / #清除云盘缓存'
+    desc: 网易云云盘管理
+  - icon: computer
+    title: '#上传 / #上传云盘'
+    desc: 上传最近音频 / 管理员云盘上传
+- group: 文章与管理
+  list:
+  - icon: computer
+    title: '#总结一下 网页链接'
+    desc: 默认使用 AstrBot 当前模型，支持微信文章
+  - icon: computer
+    title: 微信视频号 / Instagram / TikTok
+    desc: 发送完整分享链接；按需配置登录信息
+  - icon: computer
+    title: '#设置R信任用户 QQ / #删除R信任用户 QQ'
+    desc: 管理员维护信任名单
+  - icon: computer
+    title: '#R信任用户 / #查询R信任用户 QQ'
+    desc: 查看信任名单
+  - icon: computer
+    title: '#设置视频号Cookie 内容'
+    desc: 管理员私聊设置元宝 Cookie
+  - icon: computer
+    title: '#设置海外解析 / 清理垃圾'
+    desc: 代理模式与媒体缓存管理
+  - icon: computer
+    title: '#rtools engine / #rhelp'
+    desc: 依赖诊断 / AstrBot 文字帮助
