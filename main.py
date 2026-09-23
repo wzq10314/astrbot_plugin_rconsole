@@ -24,7 +24,7 @@ from .services.dependencies import EngineDependencies
 from .services.engine import ENGINE
 
 
-@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.1")
+@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.2")
 class RConsolePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -60,7 +60,7 @@ class RConsolePlugin(Star):
         self.scheduler.add_job(self.clean_engine_cache, trigger, max_instances=1, coalesce=True)
         self.scheduler.start()
 
-    def start_dependency_install(self, *, force=False):
+    def start_dependency_install(self, *, force=False, browser=False):
         if self.install_task and not self.install_task.done():
             return '依赖准备正在进行，请用 #rtools engine 查看状态。'
         if self.engine.lock.locked():
@@ -70,7 +70,7 @@ class RConsolePlugin(Star):
         self.dependencies.message = '正在准备自动安装依赖…'
         async def prepare():
             try:
-                await self.dependencies.ensure(force=force)
+                await self.dependencies.ensure(force=force, browser=browser)
                 logger.info('RConsole: %s %s', self.dependencies.message, self.dependencies.browser_message)
             except asyncio.CancelledError:
                 raise
@@ -299,6 +299,10 @@ class RConsolePlugin(Star):
         if command == "status":
             return status.render(self.started)
         if command == "tools":
+            if argument.strip() == 'browser':
+                if not is_admin(event, self.settings):
+                    return '修复图片渲染仅管理员可操作。'
+                return self.start_dependency_install(browser=True)
             if argument.strip() == 'install':
                 if not is_admin(event, self.settings):
                     return '安装依赖仅管理员可操作。'

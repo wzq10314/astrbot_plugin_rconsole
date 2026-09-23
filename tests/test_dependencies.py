@@ -88,10 +88,77 @@ class DependencyTests(unittest.IsolatedAsyncioTestCase):
         async def run(argv, *args, **kwargs):
             if 'chromium' in argv: return ProcessResult(1, 'network failure')
             return await self.fake_process(argv, *args, **kwargs)
-        with patch('astrbot_plugin_rconsole.services.dependencies.run_process', side_effect=run):
+        with patch('astrbot_plugin_rconsole.services.dependencies.run_process', side_effect=run), \
+             patch.object(self.dep,'browser_probe',AsyncMock(return_value='browser_missing')), \
+             patch.object(self.dep,'system_install_allowed',return_value=False):
             await self.dep.ensure()
         self.assertTrue(self.dep.ready)
-        self.assertIn('自动下载失败', self.dep.browser_message)
+        self.assertIn('自动下载未成功', self.dep.browser_message)
+
+    async def test_existing_browser_is_probed_without_download(self):
+        with patch.object(self.dep,'browser_probe',AsyncMock(return_value='ready')):
+            await self.dep.prepare_browser('/test/node',{})
+        self.assertFalse(self.calls)
+        self.assertIn('实际启动',self.dep.browser_message)
+
+    async def test_debian_download_failure_uses_system_browser(self):
+        async def run(argv,*args,**kwargs):
+            self.calls.append((argv,kwargs))
+            return ProcessResult(1 if 'chromium' in argv and 'apt-get' not in argv else 0,'')
+        with patch.object(self.dep,'browser_probe',AsyncMock(side_effect=['browser_missing','browser_missing','ready'])), \
+             patch.object(self.dep,'system_install_allowed',return_value=True), \
+             patch.object(self.dep,'is_debian',return_value=True), \
+             patch('astrbot_plugin_rconsole.services.dependencies.run_process',side_effect=run):
+            await self.dep.prepare_browser('/test/node',{})
+        self.assertIn(['apt-get','install','-y','--no-install-recommends','chromium','fonts-noto-cjk'],[c[0] for c in self.calls])
+        self.assertIn('已就绪',self.dep.browser_message)
+
+    async def test_missing_system_libraries_repaired_then_verified(self):
+        with patch.object(self.dep,'browser_probe',AsyncMock(side_effect=['system_libraries','system_libraries','ready'])), \
+             patch.object(self.dep,'system_install_allowed',return_value=True):
+            await self.dep.prepare_browser('/test/node',{})
+        self.assertTrue(any('install-deps' in c[0] for c in self.calls))
+        self.assertIn('已就绪',self.dep.browser_message)
+
+    async def test_system_repair_requires_opt_in_root_linux_and_apt(self):
+        self.dep.settings['engine_auto_browser_system']=False
+        self.assertFalse(self.dep.system_install_allowed())
+        self.dep.settings['engine_auto_browser_system']=True
+        with patch('platform.system',return_value='Windows'):
+            self.assertFalse(self.dep.system_install_allowed())
+
+    async def test_render_help_fallback_and_reason_are_readable(self):
+        p=RConsolePlugin(None,{})
+        response=await p.engine.handle('render_text',{'code':'browser_missing','data':{
+            'saveId':'help','helpData':[{'group':'工具','list':[{'icon':'secret_icon','title':'#点歌 歌名','desc':'搜索音乐'}]}]}})
+        self.assertIn('未找到可用 Chromium',response['text'])
+        self.assertIn('#点歌 歌名 — 搜索音乐',response['text'])
+        self.assertNotIn('saveId',response['text'])
+        self.assertNotIn('secret_icon',response['text'])
+
+    async def test_render_asset_blocks_private_network(self):
+        p=RConsolePlugin(None,{})
+        p.engine.data=self.root
+        (self.root/'runtime').mkdir()
+        self.assertIsNone(await p.engine.handle('render_asset',{'url':'http://127.0.0.1/secret.png'}))
+
+    async def test_render_asset_validates_format_and_sends_bili_referer(self):
+        p=RConsolePlugin(None,{})
+        p.engine.data=self.root
+        (self.root/'runtime').mkdir()
+        calls=[]
+        class HTTP:
+            def __init__(self,*args): pass
+            async def __aenter__(self): return self
+            async def __aexit__(self,*args): pass
+            async def download(self,url,target,limit,**kwargs):
+                calls.append((limit,kwargs))
+                target.write_bytes(b'\x89PNGfixture')
+        with patch('astrbot_plugin_rconsole.services.engine.PublicHTTP',HTTP):
+            result=await p.engine.handle('render_asset',{'url':'https://i0.hdslb.com/example.png'})
+        self.assertEqual(result['mime'],'image/png')
+        self.assertEqual(calls,[(5*1024*1024,{'referer':'https://www.bilibili.com/'})])
+        self.assertFalse(list((self.root/'runtime').iterdir()))
 
     async def test_cancellation_does_not_mark_ready(self):
         with patch('astrbot_plugin_rconsole.services.dependencies.run_process', AsyncMock(side_effect=asyncio.CancelledError)):

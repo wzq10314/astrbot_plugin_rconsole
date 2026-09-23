@@ -1,0 +1,33 @@
+<!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8">
+<style>
+@font-face{font-family:CardChinese;src:url('{{pluResPath}}font/江城月湖体 400W.ttf')}
+*{box-sizing:border-box}body{margin:0;width:760px;font-family:'Noto Sans CJK SC','Microsoft YaHei',CardChinese,sans-serif;color:#202125}
+.container{width:760px;background:linear-gradient(125deg,#eeeef0,#d6d7dc 60%,#eeeef0);overflow:hidden;position:relative}
+.header{display:flex;align-items:center;padding:38px 40px 26px;gap:16px}.avatar{width:66px;height:66px;border-radius:50%;object-fit:cover;background:#bbb;box-shadow:0 5px 15px #0002}
+.name{font-size:30px;font-weight:bold}.muted{font-size:20px;color:#72757c;margin-top:5px}.platform{margin-left:auto;font-size:27px;font-weight:bold;white-space:nowrap}
+.intro{font-size:27px;line-height:1.5;padding:0 40px 24px;overflow-wrap:anywhere;white-space:pre-wrap}
+.cover{height:450px;position:relative;overflow:hidden;background:linear-gradient(45deg,#b8bbc3,#dadce0)}
+.cover>img{width:100%;height:100%;object-fit:cover;object-position:center}
+.cover:after{content:'';position:absolute;inset:0;background:linear-gradient(0deg,#d6d7dc,transparent 30%,transparent 78%,#e8e8ec88)}
+.duration{position:absolute;top:30px;left:40px;z-index:1;color:white;text-shadow:0 2px 7px #0008;font-weight:bold;font-size:25px}
+.music{display:flex;position:absolute;bottom:24px;left:40px;right:40px;align-items:center;gap:14px;z-index:2;text-shadow:0 1px 5px #222;color:white}
+.music img{width:52px;height:52px;border-radius:12px}.music strong{font-size:23px}.music small{font-size:19px}.play{margin-left:auto;font-size:40px}
+.title{font-size:35px;font-weight:bold;line-height:1.35;margin:0 0 16px;overflow-wrap:anywhere}.content{padding:24px 40px 0}.meta{font-size:18px;line-height:1.7;color:#72757c;overflow-wrap:anywhere}
+.description{font-size:22px;white-space:pre-wrap;line-height:1.6;margin:22px 0;overflow-wrap:anywhere}
+.stats{display:flex;gap:22px;padding:32px 40px 16px}.stat{flex:1;min-width:0}.label{font-size:21px;color:#65676f}.value{font-size:38px;font-weight:bold;margin-top:8px;white-space:nowrap}
+.generated{font-size:18px;color:#80828a;padding:0 40px}.author{padding:32px 40px 16px;display:flex;align-items:center;gap:18px}.author .name{color:#333}.bilibili .author .name{color:#ec779c}
+.author-stats{display:flex;gap:45px;padding:14px 40px 30px}.author-stats .value{font-size:27px}.footer{text-align:center;font-size:15px;color:#9698a0;padding:24px 20px 26px}
+</style></head><body><div id="container" class="container {{card.kind}}">
+{{if card.kind === 'douyin'}}
+<div class="header">{{if card.avatar}}<img class="avatar" src="{{card.avatar}}">{{/if}}<div><div class="name">{{card.author}}</div><div class="muted">◷ {{card.published}}</div></div><div class="platform">♪ 抖音</div></div>
+<div class="intro">{{card.title}}</div>
+{{/if}}
+{{if card.cover}}<div class="cover"><img src="{{card.cover}}">{{if card.duration}}<div class="duration">时长: {{card.duration}}</div>{{/if}}
+{{if card.music}}<div class="music">{{if card.musicCover}}<img src="{{card.musicCover}}">{{/if}}<div><strong>{{card.music}}</strong><br><small>{{card.musicAuthor}}</small></div><span class="play">▶</span></div>{{/if}}</div>{{/if}}
+{{if card.kind === 'bilibili'}}<div class="content"><h1 class="title">{{card.title}}</h1><div class="meta">{{card.published}} · {{card.subline}}<br>稿件 BV号：{{card.id}}</div>{{if card.description}}<div class="description">{{card.description}}</div>{{/if}}</div>{{/if}}
+<div class="stats">{{each card.stats row}}<div class="stat"><div class="label">{{row.label}}</div><div class="value">{{row.value}}</div></div>{{/each}}</div>
+<div class="generated">图片生成于: {{card.generated}}</div>
+<div class="author">{{if card.avatar}}<img class="avatar" src="{{card.avatar}}">{{/if}}<div><div class="name">{{card.author}}</div><div class="muted">{{card.kind === 'douyin' ? '抖音号' : 'UID'}}: {{card.userId}}</div></div></div>
+{{if card.authorStats.length}}<div class="author-stats">{{each card.authorStats row}}<div><div class="label">{{row.label}}</div><div class="value">{{row.value}}</div></div>{{/each}}</div>{{/if}}
+<div class="footer">R-plugin · AstrBot RConsole · 致谢原版作者 zhiyu1998</div>
+</div></body></html>

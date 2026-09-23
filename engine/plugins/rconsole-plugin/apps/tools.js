@@ -39,6 +39,7 @@ const releaseTwitterCycleTls = async () => {
 };
 
 import puppeteer from "../../../lib/puppeteer/puppeteer.js";
+import VideoCard from '../model/video-card.js';
 import { replyWithRetry } from "../utils/retry.js";
 import {
     BILI_CDN_SELECT_LIST,
@@ -720,6 +721,7 @@ export class tools extends plugin {
                 const resUrl = DY_TOUTIAO_INFO.replace("1080p", resolution).replace("{}", videoAddrURI);
                 await this.handleDouyinResolvedVideo(e, {
                     douId,
+                    item,
                     author: item.author || {},
                     authorNickname: item.author?.nickname || "抖音用户",
                     desc: item.desc || "",
@@ -850,6 +852,7 @@ export class tools extends plugin {
             }
             await this.handleDouyinResolvedVideo(e, {
                 douId: resolved.awemeId || douId,
+                item: resolved.aweme || {},
                 author: resolved.author || {},
                 authorNickname: resolved.authorNickname || "抖音用户",
                 desc: resolved.desc || "",
@@ -892,8 +895,9 @@ export class tools extends plugin {
             // 超过时长阈值时沿用老行为：只提示，不发送视频。
             dySendContent += `\n
                     ${DIVIDING_LINE.replace('{}', '限制说明')}\n当前视频时长约：${(durationSeconds / 60).toFixed(2).replace(/\.00$/, '')} 分钟，\n大于管理员设置的最大时长 ${(this.douyinDuration / 60).toFixed(2).replace(/\.00$/, '')} 分钟！`;
-            if (coverUrl) {
-                await replyWithRetry(e, Bot, [segment.image(coverUrl), dySendContent]);
+            if (this.douyinDisplayCover) {
+                const card = await puppeteer.screenshot('douyin-video', new VideoCard().douyin(options,dySendContent));
+                await replyWithRetry(e, Bot, [card, '视频超过管理员设置的时长限制，本次不发送视频。']);
             } else {
                 e.reply(dySendContent);
             }
@@ -904,8 +908,9 @@ export class tools extends plugin {
             return;
         }
 
-        if (this.douyinDisplayCover && coverUrl) {
-            await replyWithRetry(e, Bot, [segment.image(coverUrl), dySendContent]);
+        if (this.douyinDisplayCover) {
+            const card = await puppeteer.screenshot('douyin-video', new VideoCard().douyin(options,dySendContent));
+            await replyWithRetry(e, Bot, [card]);
         } else {
             e.reply(dySendContent);
         }
@@ -1737,6 +1742,7 @@ export class tools extends plugin {
         const { view, danmaku, reply, favorite, coin, share, like } = videoInfo.stat;
         // 格式化数据
         let combineContent = "";
+        let cardSummary = "";
         // 是否显示信息
         if (this.biliDisplayInfo) {
             // 构造一个可扩展的Map
@@ -1755,7 +1761,8 @@ export class tools extends plugin {
         if (this.biliDisplayIntro) {
             // 过滤简介中的一些链接
             const filteredDesc = await filterBiliDescLink(desc);
-            combineContent += `\n📝 简介：${truncateString(filteredDesc, this.toolsConfig.biliIntroLenLimit || BILI_DEFAULT_INTRO_LEN_LIMIT)}`;
+            cardSummary = truncateString(filteredDesc, this.toolsConfig.biliIntroLenLimit || BILI_DEFAULT_INTRO_LEN_LIMIT);
+            combineContent += `\n📝 简介：${cardSummary}`;
         }
         // 是否显示在线人数
         if (this.biliDisplayOnline) {
@@ -1763,6 +1770,7 @@ export class tools extends plugin {
             const onlineTotal = await this.biliOnlineTotal(bvid, cid);
             if (onlineTotal) {
                 combineContent += `\n🏄‍♂️️ 当前视频有 ${onlineTotal.total} 人在观看，其中 ${onlineTotal.count} 人在网页端观看`;
+                cardSummary += `\n🏄 当前视频有 ${onlineTotal.total} 人在观看，其中 ${onlineTotal.count} 人在网页端观看`;
             }
         }
 
@@ -1775,8 +1783,10 @@ export class tools extends plugin {
         let biliInfo = [finalTitle, combineContent];
         // 是否显示封面
         if (this.biliDisplayCover) {
-            // 加入图片
-            biliInfo.unshift(segment.image(pic));
+            const data = new VideoCard().bili(videoInfo, displayTitle,
+                partTitle && partTitle !== displayTitle ? `${pParam}P: ${partTitle}` : '',
+                cardSummary, finalTitle + combineContent, this);
+            biliInfo = [await puppeteer.screenshot('bilibili-video', data)];
         }
         return biliInfo;
     }

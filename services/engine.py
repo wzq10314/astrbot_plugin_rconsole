@@ -1,5 +1,6 @@
 """AstrBot host for the bundled upstream protocol engine (no Yunzai/Redis needed)."""
 import asyncio
+import aiohttp
 import base64
 import hashlib
 from html.parser import HTMLParser
@@ -212,7 +213,29 @@ class EngineHost:
             if field in COOKIE_MAP: self.plugin.settings[COOKIE_MAP[field]]=value
             return True
         if op=='summarize': return await self.summarize(data['url'])
+        if op=='render_asset':
+            target=self.data/'runtime'/('card-'+hashlib.sha256(str(data.get('url','')).encode()).hexdigest()[:20])
+            try:
+                host=urlsplit(data['url']).hostname or ''
+                referer='https://www.bilibili.com/' if host.endswith(('.hdslb.com','.bilibili.com')) else 'https://www.douyin.com/' if host.endswith(('.douyinpic.com','.byteimg.com','.douyincdn.com','.ibytedtos.com')) else ''
+                async with asyncio.timeout(6):
+                    async with PublicHTTP(6) as http:
+                        await http.download(data['url'],target,5*1024*1024,referer=referer)
+                raw=target.read_bytes()
+                mime=('image/png' if raw.startswith(b'\x89PNG') else 'image/jpeg' if raw.startswith(b'\xff\xd8')
+                      else 'image/webp' if raw.startswith(b'RIFF') and raw[8:12]==b'WEBP'
+                      else 'image/gif' if raw.startswith(b'GIF8') else '')
+                return {'data':base64.b64encode(raw).decode(),'mime':mime} if mime else None
+            except (MediaError, ValueError, OSError, TimeoutError, aiohttp.ClientError):
+                return None
+            finally: target.unlink(missing_ok=True)
+        if op=='render_status':
+            from .dependencies import browser_hint
+            self.plugin.dependencies.browser_message = browser_hint(data.get('code'))
+            return True
         if op=='render_text':
+            from .dependencies import browser_hint
+            self.plugin.dependencies.browser_message = browser_hint(data.get('code'))
             return {'type':'text','text':self.render_text(data['data'])}
         if op=='reply': return await self.reply(data)
         if op=='upload': return await self.upload(data['file'])
@@ -233,6 +256,16 @@ class EngineHost:
         raise MediaError('不支持的核心操作。')
 
     def render_text(self,data):
+        hint = self.plugin.dependencies.browser_message or '请发送 #rtools engine 检查，管理员可发送 #rtools browser 修复。'
+        if isinstance(data.get('helpData'), list):
+            rows=['图片渲染暂不可用：'+hint, 'RConsole 帮助（文字版）']
+            for group in data['helpData'][:30]:
+                rows.append('\n【'+str(group.get('group','功能'))+'】')
+                for item in group.get('list',[])[:50]:
+                    rows.append(str(item.get('title',''))+' — '+str(item.get('desc','')))
+            return redact('\n'.join(rows)[:12000],self.plugin.settings)
+        if isinstance(data.get('fallback'), str):
+            return redact(data['fallback'][:9000]+'\n\n图片渲染暂不可用：'+hint,self.plugin.settings)
         hidden=re.compile(r'cookie|token|secret|sess|api.?key|tplFile|pluResPath|headStyle',re.I)
         rows=[]
         def walk(value,key=''):
@@ -243,7 +276,7 @@ class EngineHost:
                 for v in value[:30]:walk(v,key)
             elif value is not None and str(value).strip():rows.append(f'{key}：{value}' if key else str(value))
         walk(data)
-        return redact('图片渲染不可用，以下为文字内容：\n'+'\n'.join(rows)[:10000],self.plugin.settings)
+        return redact('图片渲染暂不可用：'+hint+'\n'+'\n'.join(rows)[:10000],self.plugin.settings)
 
     async def summarize(self,url):
         async with PublicHTTP(25) as http:

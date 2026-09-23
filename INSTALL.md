@@ -1,4 +1,4 @@
-# 安装与升级 RConsole 1.0.1
+# 安装与升级 RConsole 1.0.2
 
 适用于 AstrBot 4.28.1、Python 3.12、OneBot11 / NapCat；以下沿用你的容器名 `astrbot`。
 
@@ -21,10 +21,10 @@ npm --version
 需要 Node.js 22+。如果没有，推荐使用本包 `Dockerfile.rconsole` 制作持久化镜像：在宿主机插件文件夹运行下面命令，将参数替换为你当前使用的 AstrBot 镜像及标签。
 
 ```bash
-docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标签 -t astrbot-rconsole:1.0.1 .
+docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标签 -t astrbot-rconsole:1.0.2 .
 ```
 
-把原 Compose 中 AstrBot 的 `image` 改为 `astrbot-rconsole:1.0.1`，保留原端口、网络和 `/AstrBot/data` 挂载，重新创建容器。此 Dockerfile 适用于 Debian/Ubuntu 基础镜像。
+把原 Compose 中 AstrBot 的 `image` 改为 `astrbot-rconsole:1.0.2`，保留原端口、网络和 `/AstrBot/data` 挂载，重新创建容器。此 Dockerfile 适用于 Debian 基础镜像（包含系统 Chromium）。
 
 ## 3. 自动安装插件依赖
 
@@ -37,7 +37,7 @@ docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标
 
 ### 容器系统依赖（仍需准备一次）
 
-插件不自动执行 apt 或修改系统权限。推荐使用附带的 Dockerfile；手工准备时在容器执行：
+默认 `engine_auto_browser_system: true`：如果是 Linux/root/apt 环境，插件可补齐缺失的 Chromium 系统库；Debian 上 Playwright 下载失败则自动执行 apt-get update，并安装 chromium 与 fonts-noto-cjk。不会执行 sudo 或提权。受管理的镜像可关闭该选项，由镜像预装。推荐使用附带的 Debian Dockerfile；其他媒体系统工具手工准备时在容器执行：
 
 ```bash
 apt-get update
@@ -45,7 +45,7 @@ apt-get install -y ffmpeg git fonts-noto-cjk
 python3 -m pip install -U yt-dlp
 ```
 
-Node.js 22+ 和 npm 按第 2 节准备。Chromium 自动下载不包含 Linux 系统库；如果图片渲染提示缺少系统库，在核心依赖就绪后进入插件 `engine` 目录执行 `npx playwright install-deps chromium`，然后重载。Chromium 用于菜单、歌曲列表、评论图片与元宝浏览器模式；普通渲染失败会尝试文字输出。
+Node.js 22+ 和 npm 按第 2 节准备。浏览器就绪状态以实际启动并截图为准。发送 `#rtools browser` 可单独重试渲染准备，不强制重装已就绪的 npm 包。自动修复不适用或失败时：在核心依赖就绪后进入插件 `engine` 目录执行 `npx playwright install --with-deps chromium`；Debian 也可以 `apt-get update && apt-get install -y chromium fonts-noto-cjk`，再重载插件。Chromium 用于菜单、歌曲列表、评论图片与元宝浏览器模式；普通渲染失败会尝试文字输出。
 
 如果主动关闭自动安装，可按原方式在 `engine` 目录执行 `npm ci` 和 `npx playwright install --with-deps chromium`。不要把 Windows 的 node_modules 复制到 Linux。
 
@@ -57,7 +57,8 @@ Node.js 22+ 和 npm 按第 2 节准备。Chromium 自动下载不包含 Linux �
 
 - `engine_enable`：开启完整核心；关闭后使用保留的三平台原生解析。
 - `engine_auto_install`：默认开启，后台自动准备 Node 依赖。
-- `engine_auto_browser`：默认开启，核心就绪后下载 Chromium。
+- `engine_auto_browser`：默认开启，核心就绪后检查、下载或复用 Chromium。
+- `engine_auto_browser_system`：默认开启，允许满足上述条件时通过 apt 补装浏览器及系统库。
 - `engine_npm_registry`：可选 npm 镜像 HTTPS 地址。
 - `engine_node`：默认 node，可填写可执行文件绝对路径。
 - `engine_timeout`：单次处理超时 60～600 秒，默认 300。
@@ -108,7 +109,9 @@ Node.js 22+ 和 npm 按第 2 节准备。Chromium 自动下载不包含 Linux �
 
 ## 5. 检查与日志
 
-发送 `#rtools engine`、`#R插件版本`、`#R帮助`，再逐项测试已配置的平台。
+发送 `#rtools engine` 查看浏览器实际检查结果，再发送 `#R帮助`。如果仍是文字回退，管理员发送 `#rtools browser`，完成后重试帮助和视频链接。帮助回退不会再罗列 saveId、icon 等内部字段。
+
+抖音/B站普通视频卡片包括封面、作者、简介和接口返回的互动统计；部分 API/SSR 不提供完整统计时显示“—”。B站关注数/粉丝数没有随视频接口返回时不显示，不额外要求用户登录。保留原有视频时长限制和视频发送逻辑。
 
 ```bash
 docker logs --since 10m --tail 200 astrbot

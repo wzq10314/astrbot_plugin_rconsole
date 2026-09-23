@@ -155,7 +155,12 @@
   },
   "engine_auto_browser": {
     "type": "bool",
-    "description": "依赖准备后自动下载 Chromium，用于图文渲染；不会安装容器系统库",
+    "description": "依赖准备后自动检查和准备 Chromium，用于图文渲染",
+    "default": true
+  },
+  "engine_auto_browser_system": {
+    "type": "bool",
+    "description": "允许在 Linux/root/apt 容器补装 Chromium 系统库；Debian 下浏览器下载失败时通过 apt 安装 chromium 和中文字体",
     "default": true
   },
   "engine_npm_registry": {

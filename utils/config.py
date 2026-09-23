@@ -5,6 +5,7 @@ DEFAULTS = {
     "engine_enable": True,
     "engine_auto_install": True,
     "engine_auto_browser": True,
+    "engine_auto_browser_system": True,
     "engine_npm_registry": "",
     "engine_node": "node",
     "engine_timeout": 300,

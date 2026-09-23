@@ -54,7 +54,47 @@ class EngineDependencies:
         result = await run_process([node, str(self.root/'probe.mjs')], 45, 2000, cwd=self.root, env=env)
         return result.code == 0 and not result.timed_out
 
-    async def ensure(self, *, force=False):
+    async def browser_probe(self, node, env):
+        result = await run_process([node, str(self.root/'browser-check.mjs')], 50, 2000, cwd=self.root, env=env)
+        try:
+            data = json.loads(result.output)
+            if result.code == 0 and data.get('ok') is True: return 'ready'
+            return data.get('code', 'browser_launch')
+        except (ValueError, AttributeError):
+            return 'render_timeout' if result.timed_out else 'browser_launch'
+
+    def system_install_allowed(self):
+        return (self.settings.get('engine_auto_browser_system', True)
+                and platform.system() == 'Linux' and getattr(os,'geteuid',lambda: -1)() == 0
+                and bool(shutil.which('apt-get')))
+
+    def is_debian(self):
+        try: return re.search(r'^ID=["\']?debian["\']?$', Path('/etc/os-release').read_text(), re.M) is not None
+        except OSError: return False
+
+    async def prepare_browser(self, node, env):
+        code = await self.browser_probe(node, env)
+        if code == 'ready':
+            self.browser_message = '图片渲染已就绪（已实际启动浏览器并截图）。'
+            return
+        self.browser_message = '正在下载 Chromium，媒体下载仍可使用。'
+        cli = [node, str(self.root/'node_modules/playwright/cli.js')]
+        result = await run_process(cli + ['install','chromium'], 600, 4000, cwd=self.root, env=env)
+        code = await self.browser_probe(node, env)
+        if code != 'ready' and self.system_install_allowed():
+            if code == 'system_libraries':
+                self.browser_message = '正在补装 Chromium 所需的 Linux 系统库…'
+                await run_process(cli + ['install-deps','chromium'], 600, 4000, cwd=self.root, env=env)
+            elif self.is_debian() and (result.code or result.timed_out or code == 'browser_missing'):
+                self.browser_message = '浏览器下载失败，正在通过 Debian 系统软件源安装 Chromium 和中文字体…'
+                apt_env = {**env, 'DEBIAN_FRONTEND':'noninteractive'}
+                updated = await run_process(['apt-get','update'], 180, 4000, env=apt_env)
+                if updated.code == 0 and not updated.timed_out:
+                    await run_process(['apt-get','install','-y','--no-install-recommends','chromium','fonts-noto-cjk'],600,4000,env=apt_env)
+            code = await self.browser_probe(node, env)
+        self.browser_message = browser_hint(code)
+
+    async def ensure(self, *, force=False, browser=False):
         async with self.lock:
             self.started = True
             self.ready = False
@@ -99,12 +139,8 @@ class EngineDependencies:
                     self.marker.write_text(json.dumps({'fingerprint': fingerprint}), encoding='utf-8')
                 self.ready = True
                 self.message = '原版核心依赖已就绪，可以直接发送链接。'
-                if self.settings.get('engine_auto_browser', True):
-                    self.browser_message = 'Chromium 图片渲染依赖正在准备，媒体解析已可使用。'
-                    browser = await run_process([node, str(self.root/'node_modules/playwright/cli.js'),
-                                                 'install', 'chromium'], 600, 4000, cwd=self.root, env=env)
-                    self.browser_message = ('Chromium 下载已完成；系统库仍由容器提供。' if browser.code == 0 and not browser.timed_out
-                                            else 'Chromium 自动下载失败；核心解析仍可用，图文菜单会尝试文字回退。可重试 #rtools install。')
+                if browser or self.settings.get('engine_auto_browser', True):
+                    await self.prepare_browser(node, env)
             except asyncio.CancelledError:
                 if not self.ready: self.message = '依赖安装已随插件卸载停止，下次加载会重新检查。'
                 raise
@@ -122,3 +158,16 @@ class EngineDependencies:
         else: reason = 'npm 安装未成功，请检查容器网络及 Node/npm 环境'
         # Never echo npm output: private registry URLs may contain credentials.
         return '自动安装失败：' + reason + '。管理员发送 #rtools install 可重试。'
+
+
+def browser_hint(code):
+    messages = {
+        'ready':'图片渲染已就绪（已实际启动浏览器并截图）。',
+        'browser_missing':'未找到可用 Chromium，自动下载未成功。管理员发送 #rtools browser 重试；Debian/root 容器支持系统软件源回退。',
+        'system_libraries':'Chromium 缺少 Linux 系统库。在插件 engine 目录执行 npx playwright install-deps chromium，或启用系统依赖自动修复后发送 #rtools browser。',
+        'template_error':'图片模板编译失败，请更新完整插件包，不能只覆盖 main.py。',
+        'render_timeout':'图片渲染超时，请检查容器资源与图片网络后重试。',
+        'browser_launch':'Chromium 启动失败，请检查容器权限、内存和系统库，管理员可发送 #rtools browser 重试。',
+        'render_error':'图片生成失败，请更新完整插件并检查 #rtools engine。',
+    }
+    return messages.get(code, messages['render_error'])
