@@ -1,4 +1,19 @@
 {
+  "webpage_enable": {
+    "type": "bool",
+    "description": "普通网页链接自动截图；已有媒体解析和文章总结优先，沿用自动解析开关及群号限制",
+    "default": true
+  },
+  "webpage_timeout": {
+    "type": "int",
+    "description": "网页截图超时秒数（15～90）",
+    "default": 45
+  },
+  "webpage_max_height": {
+    "type": "int",
+    "description": "网页截图最大高度像素（900～10000），超出部分截断",
+    "default": 6000
+  },
   "use_file_config": {
     "description": "使用插件目录的 config.yaml（启用后其他 WebUI 项不再生效）",
     "type": "bool",

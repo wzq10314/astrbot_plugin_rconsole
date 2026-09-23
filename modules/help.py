@@ -1,5 +1,6 @@
 def render() -> str:
-    return """RConsole v1.0.2 · AstrBot 完整核心适配版
+    return """RConsole v1.0.3 · AstrBot 完整核心适配版
+普通网页：直接发送链接自动截图；已有解析平台优先。
 直接发送原版支持的平台分享链接可自动解析。
 #RBQ — B站扫码登录（仅管理员私聊）
 #RBS — B站登录状态（管理员）

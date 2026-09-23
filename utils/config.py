@@ -2,6 +2,9 @@ from pathlib import Path
 import yaml
 
 DEFAULTS = {
+    "webpage_enable": True,
+    "webpage_timeout": 45,
+    "webpage_max_height": 6000,
     "engine_enable": True,
     "engine_auto_install": True,
     "engine_auto_browser": True,
@@ -70,7 +73,7 @@ def load_config(config, root: Path) -> dict:
         ("command_timeout", 1, 30), ("max_output_chars", 100, 4000), ("query_port", 1, 65535),
         ("media_max_size_mb", 1, 64), ("media_max_duration", 1, 3600), ("media_max_images", 1, 30),
         ("media_request_timeout", 5, 60), ("media_total_timeout", 30, 600), ("media_cooldown", 0, 300),
-        ("engine_timeout", 60, 600)
+        ("engine_timeout", 60, 600), ("webpage_timeout", 15, 90), ("webpage_max_height", 900, 10000)
     ):
         value = result[name]
         if type(value) is not int or not minimum <= value <= maximum:

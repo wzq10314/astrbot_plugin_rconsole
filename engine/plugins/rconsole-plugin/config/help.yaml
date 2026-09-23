@@ -99,6 +99,9 @@
 - group: 文章与管理
   list:
   - icon: computer
+    title: 普通网页自动截图
+    desc: 直接发送网页链接；已有平台解析优先
+  - icon: computer
     title: '#总结一下 网页链接'
     desc: 默认使用 AstrBot 当前模型，支持微信文章
   - icon: computer

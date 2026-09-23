@@ -22,9 +22,10 @@ from .utils.http import PublicHTTP
 from .services.engine import EngineHost
 from .services.dependencies import EngineDependencies
 from .services.engine import ENGINE
+from .services.webpage import webpage_url, screenshot_and_send
 
 
-@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.2")
+@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.3")
 class RConsolePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -220,6 +221,11 @@ class RConsolePlugin(Star):
             if explicit:
                 yield event.plain_result('请发送 #rparse <B站/抖音/小红书分享链接>，也支持单独的 BV 号。')
                 event.stop_event()
+            elif self.settings['webpage_enable'] and not text.startswith('#') and not self.engine.match(text):
+                target = webpage_url(text)
+                if target:
+                    response = await self.capture_webpage(event, target)
+                    if response: yield event.plain_result(response)
             return
         platform = identify_url(url)
         if not self.settings['media_enable'] or not self.settings[f'{platform}_enable']:
@@ -276,6 +282,38 @@ class RConsolePlugin(Star):
             finally:
                 self.tasks.discard(task)
         event.stop_event()
+
+    async def capture_webpage(self,event,url):
+        if not self.settings['media_enable']: return
+        group=event.get_group_id()
+        if self.settings['media_groups'] and group and str(group) not in self.settings['media_groups']: return
+        if str(event.get_sender_id())==str(getattr(event.message_obj,'self_id','')): return
+        origin=str(event.unified_msg_origin);user=(origin,str(event.get_sender_id()));duplicate=(origin,url)
+        now=time.monotonic()
+        if now-self.media_duplicates.get(duplicate,-1000)<60 or now-self.media_recent.get(user,-1000)<self.settings['media_cooldown']: return
+        if self.media_busy.locked(): return
+        if self.dependencies.started and not self.dependencies.ready:
+            event.stop_event()
+            return self.dependencies.message
+        async with self.media_busy:
+            self.media_recent[user]=now
+            self.media_recent.move_to_end(user)
+            while len(self.media_recent)>1024:self.media_recent.popitem(last=False)
+            task=asyncio.create_task(screenshot_and_send(url,self.settings,OneBotSender(event)))
+            self.tasks.add(task)
+            try:
+                await task
+                self.media_duplicates[duplicate]=time.monotonic()
+                self.media_duplicates.move_to_end(duplicate)
+                while len(self.media_duplicates)>512:self.media_duplicates.popitem(last=False)
+            except MediaError as exc: return str(exc)
+            except (OSError,TimeoutError): return '网页截图失败，请检查浏览器环境和容器网络。'
+            except Exception as exc:
+                logger.warning('RConsole webpage failed: %s',type(exc).__name__)
+                return '网页截图失败，请检查 #rtools engine 或稍后重试。'
+            finally:
+                self.tasks.discard(task)
+                event.stop_event()
 
     @filter.regex(PATTERN)
     async def on_command(self, event: AstrMessageEvent):

@@ -1,4 +1,4 @@
-# 安装与升级 RConsole 1.0.2
+# 安装与升级 RConsole 1.0.3
 
 适用于 AstrBot 4.28.1、Python 3.12、OneBot11 / NapCat；以下沿用你的容器名 `astrbot`。
 
@@ -21,10 +21,10 @@ npm --version
 需要 Node.js 22+。如果没有，推荐使用本包 `Dockerfile.rconsole` 制作持久化镜像：在宿主机插件文件夹运行下面命令，将参数替换为你当前使用的 AstrBot 镜像及标签。
 
 ```bash
-docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标签 -t astrbot-rconsole:1.0.2 .
+docker build -f Dockerfile.rconsole --build-arg ASTRBOT_IMAGE=你的镜像及标签 -t astrbot-rconsole:1.0.3 .
 ```
 
-把原 Compose 中 AstrBot 的 `image` 改为 `astrbot-rconsole:1.0.2`，保留原端口、网络和 `/AstrBot/data` 挂载，重新创建容器。此 Dockerfile 适用于 Debian 基础镜像（包含系统 Chromium）。
+把原 Compose 中 AstrBot 的 `image` 改为 `astrbot-rconsole:1.0.3`，保留原端口、网络和 `/AstrBot/data` 挂载，重新创建容器。此 Dockerfile 适用于 Debian 基础镜像（包含系统 Chromium）。
 
 ## 3. 自动安装插件依赖
 
@@ -55,6 +55,9 @@ Node.js 22+ 和 npm 按第 2 节准备。浏览器就绪状态以实际启动并
 
 后台 → 插件 → RConsole → 配置，保存后重载。
 
+- `webpage_enable`：默认开启，未匹配现有解析规则的普通网页自动截图。
+- `webpage_timeout`：截图超时 15～90 秒，默认 45。
+- `webpage_max_height`：截图高度上限 900～10000 像素，默认 6000。
 - `engine_enable`：开启完整核心；关闭后使用保留的三平台原生解析。
 - `engine_auto_install`：默认开启，后台自动准备 Node 依赖。
 - `engine_auto_browser`：默认开启，核心就绪后检查、下载或复用 Chromium。
@@ -120,3 +123,7 @@ docker logs --since 10m --tail 200 astrbot
 适配层不输出原版含凭据的调试日志。AstrBot 和其他消息采集插件可能提前记录原始消息；向别人发送日志前删除 Cookie、token 和二维码参数。
 
 信任列表、点歌选择与云盘缓存存放在 `data/plugin_data/astrbot_plugin_rconsole/engine-state.json`。媒体与渲染缓存位于其中的 `runtime` 子目录，定时清理仅作用于该缓存目录。`#R插件更新` 已改为 AstrBot 后台更新指引，避免原版 git 自更新破坏移植代码。
+
+## 网页截图验收
+
+更新后发送 `https://example.com/`，应收到网页截图；然后发送抖音/B站/小红书链接，仍应走原有解析。普通网页截图需要浏览器处于就绪状态；无需安装其他 Python/Node 包。只有匿名公开网页可访问，登录态及需要提交请求的数据不会自动读取。

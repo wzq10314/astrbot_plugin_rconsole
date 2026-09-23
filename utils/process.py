@@ -29,12 +29,23 @@ async def run_process(argv: list[str], timeout: float, limit: int, *, cwd=None, 
             truncated |= len(chunk) > remaining
         await proc.wait()
 
-    def kill():
+    async def kill():
         try:
             if os.name == "posix":
                 os.killpg(proc.pid, signal.SIGKILL)
             elif proc.returncode is None:
-                proc.kill()
+                # A cancelled browser task must not leave Chromium children running.
+                try:
+                    killer = await asyncio.create_subprocess_exec(
+                        'taskkill', '/PID', str(proc.pid), '/T', '/F',
+                        stdout=asyncio.subprocess.DEVNULL, stderr=asyncio.subprocess.DEVNULL)
+                    try: await asyncio.wait_for(killer.wait(), 5)
+                    except TimeoutError:
+                        killer.kill()
+                        await killer.wait()
+                except OSError:
+                    pass
+                if proc.returncode is None: proc.kill()
         except ProcessLookupError:
             pass
 
@@ -46,7 +57,7 @@ async def run_process(argv: list[str], timeout: float, limit: int, *, cwd=None, 
         timed_out = True
     finally:
         # Also clean up descendants when the parent exits or the handler is cancelled.
-        kill()
+        await kill()
         try:
             await asyncio.wait_for(task, 2)
         except TimeoutError:

@@ -1,5 +1,8 @@
 # 默认使用 AstrBot 后台配置；仅启用 use_file_config 后读取本文件。
 use_file_config: false
+webpage_enable: true
+webpage_timeout: 45
+webpage_max_height: 6000
 admins: []
 shell_enable: false
 shell_private_only: true
