@@ -93,7 +93,7 @@ class XiaohongshuService:
         params = parse_qs(parsed.query)
         # Recover the original note URL from a verification redirect, as upstream does.
         # This does not solve or bypass a challenge; the ensuing page may still refuse access.
-        if 'captcha' in parsed.path and params.get('redirectPath'):
+        if params.get('redirectPath'):
             from ..utils.http import validate_url
             target = urljoin(REFERER, params['redirectPath'][0])
             validate_url(target, ('xiaohongshu.com',))
@@ -108,6 +108,6 @@ class XiaohongshuService:
         canonical = REFERER + 'explore/' + match[1] + '?' + urlencode({
             'xsec_token': token, 'xsec_source': params.get('xsec_source', ['pc_feed'])[0]})
         final_url, page = await http.text(canonical, **options)
-        if 'captcha' in urlsplit(final_url).path or '/404' in urlsplit(final_url).path:
+        if any(part in urlsplit(final_url).path for part in ('captcha', '/404', '/login')):
             raise MediaError('小红书返回验证/不可见页面，请在浏览器确认内容可见并更新 Cookie 和分享链接。')
         return parse_note(read_state(page, 'window.__INITIAL_STATE__'), match[1], canonical)

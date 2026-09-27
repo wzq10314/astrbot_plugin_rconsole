@@ -25,7 +25,7 @@ from .services.engine import ENGINE
 from .services.webpage import webpage_url, screenshot_and_send
 
 
-@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.3")
+@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.4")
 class RConsolePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)

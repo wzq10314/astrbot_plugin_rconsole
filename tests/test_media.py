@@ -194,6 +194,42 @@ class MediaTests(unittest.IsolatedAsyncioTestCase):
         http.text.return_value = ('https://www.xiaohongshu.com/captcha', '')
         with self.assertRaises(MediaError): await XiaohongshuService().resolve(NOTE_URL, http, config)
 
+    def test_xhs_new_state_literals_preserve_strings(self):
+        state = note_state()
+        state['note']['noteDetailMap'][NOTE_ID]['note']['desc'] = 'undefined new Map([]) new Set(["x)"])'
+        raw = json.dumps(state)[:-1] + ',"missing":undefined,"AiNoteDetailStore":{"noteDetailMap":new Map([["x)", {"a":new Set([])}]])}}'
+        decoded = read_state('window.__INITIAL_STATE__=' + raw + ';evil(new Map(', 'window.__INITIAL_STATE__')
+        self.assertEqual(decoded['note'], state['note'])
+        self.assertIsNone(decoded['missing'])
+        self.assertEqual(decoded['AiNoteDetailStore']['noteDetailMap'], {})
+        for bad in ['{"x":new Map([}', '{"x":runCode()}', '{"x":undefinedValue}']:
+            with self.assertRaises(MediaError):
+                read_state('window.__INITIAL_STATE__=' + bad, 'window.__INITIAL_STATE__')
+
+    async def test_xhs_login_shortlink_recovers_nested_parameters(self):
+        redirect = 'https://www.xiaohongshu.com/login?redirectPath=' + quote(NOTE_URL, safe='')
+        page = 'window.__INITIAL_STATE__=' + json.dumps(note_state())
+        http = types.SimpleNamespace(text=AsyncMock(side_effect=[(redirect, ''), (NOTE_URL, page)]))
+        result = await XiaohongshuService().resolve('https://xhslink.cn/o/example', http, {**DEFAULTS, 'xiaohongshu_cookie': 'web_session=test'})
+        self.assertEqual(result.url, NOTE_URL)
+        self.assertEqual(http.text.call_args.args[0], NOTE_URL)
+
+    async def test_xhs_redirect_must_remain_on_xiaohongshu(self):
+        redirect = 'https://www.xiaohongshu.com/login?redirectPath=' + quote('http://127.0.0.1/private', safe='')
+        http = types.SimpleNamespace(text=AsyncMock(return_value=(redirect, '')))
+        with self.assertRaises(MediaError):
+            await XiaohongshuService().resolve('https://xhslink.cn/o/example', http, {**DEFAULTS, 'xiaohongshu_cookie': 'web_session=test'})
+        self.assertEqual(http.text.await_count, 1)
+
+    def test_xhs_ef_streams_and_empty_h264(self):
+        state = note_state('video')
+        state['note']['noteDetailMap'][NOTE_ID]['note']['video']['media']['stream'] = {
+            'h264': [], 'EF5': [{'masterUrl': '', 'backupUrls': ['https://cdn.example.com/ef5.mp4']}],
+            'EF4': [{'masterUrl': 'https://cdn.example.com/ef4.mp4'}]}
+        result = parse_note(state, NOTE_ID, NOTE_URL)
+        self.assertEqual(len(result.video_candidates), 2)
+        self.assertTrue(all(address for address, _ in result.video_candidates))
+
     def test_xhs_alternative_formats(self):
         state = note_state('video')
         video = state['note']['noteDetailMap'][NOTE_ID]['note']['video']

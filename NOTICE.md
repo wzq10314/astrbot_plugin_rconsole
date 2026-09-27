@@ -4,8 +4,8 @@
 
 - 用户提供入口：https://gitee.com/kyrzy0416/rconsole-plugin
 - 同源 GitHub：https://github.com/zhiyu1998/rconsole-plugin
-- 本次依据提交：`7e1f0eed107e1c5181baec6fc83d3a9fdb6a1eef`
-- 核对日期：2026-09-22。
+- 本次依据提交：`f8b7cb57b22a378bd326ad50d177f8f32f82d9f6`
+- 核对日期：2026-09-27。
 - 原始文件校验见 `engine/UPSTREAM_HASHES.json`；它记录修改前来源，不是发行文件的哈希。
 
 `engine/plugins/rconsole-plugin` 包含原版 apps、utils、model、constants、config、resources。保留其源码注释、署名及 MulanPSL-2.0 LICENSE。新增 AstrBot 适配层同用 MulanPSL-2.0；第三方文件自己的许可或额外说明继续适用。

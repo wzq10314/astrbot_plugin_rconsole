@@ -4,7 +4,7 @@
 
 **把 R-plugin 的视频、音乐、图文和工具带到 AstrBot**
 
-![版本](https://img.shields.io/badge/version-1.0.3-blue)
+![版本](https://img.shields.io/badge/version-1.0.4-blue)
 ![AstrBot](https://img.shields.io/badge/AstrBot-4.28.1%2B-purple)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Node](https://img.shields.io/badge/Node.js-22%2B-green)
@@ -20,7 +20,7 @@
 
 浏览量徽章是第三方计数，不等同于 GitHub 官方独立访客数。
 
-本项目是 [R-console / R-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 的 AstrBot 适配版，由 **wzq10314** 维护。1.0.3 将原版协议核心随插件打包，通过 Python 适配 AstrBot 的消息、权限、配置与 AI 服务。**不需要安装 Yunzai 或 Redis，但完整功能需要 Node.js。**
+本项目是 [R-console / R-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 的 AstrBot 适配版，由 **wzq10314** 维护。1.0.4 将原版协议核心随插件打包，通过 Python 适配 AstrBot 的消息、权限、配置与 AI 服务。**不需要安装 Yunzai 或 Redis，但完整功能需要 Node.js。**
 
 原版的 6 类应用、53 条命令路由已纳入适配范围。这表示代码和入口已接入，不代表所有第三方接口、地区网络和账号权益均已在线验证，具体见[功能对照表](FEATURE_MATRIX.md)。
 
@@ -103,3 +103,8 @@
 感谢 [AstrBot](https://github.com/AstrBotDevs/AstrBot)、[NapCatQQ](https://github.com/NapNeko/NapCatQQ)、yt-dlp、BBDown、tdl、freyr，以及原版引用的音乐 API、解析与签名项目。第三方代码以各自附带的许可和说明为准。
 
 本项目不代表上述项目官方。来源版本、修改范围和许可见 [NOTICE.md](NOTICE.md)。
+
+
+## v1.0.4 — 2026-09-27
+
+同步 Gitee 上游 `f8b7cb57b22a378bd326ad50d177f8f32f82d9f6` 的小红书修复：登录/验证跳转的原始笔记地址恢复、新版页面状态中的 Map/Set/undefined、安全解析以及 EF5/EF4 视频回退。AstrBot 实际使用的 Python 小红书解析路径同步更新；保留签名参数、域名检查和转码逻辑。原有卡片渲染、普通网页截图、登录状态及独立数据目录保持兼容。
