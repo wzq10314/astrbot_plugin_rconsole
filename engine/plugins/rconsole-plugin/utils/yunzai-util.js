@@ -389,7 +389,7 @@ export async function cleanupTempFiles(filePaths) {
  * @returns {Promise<{success: boolean, results: Array}>} 发送结果
  */
 export async function sendImagesInBatches(e, forwardMsgList, batchThreshold = 50, options = {}) {
-    const { replyWithRetry } = await import("./retry.js");
+    const { replyWithRetry, isReplySuccess } = await import("./retry.js");
     const { useRetry = true } = options;
 
     if (!forwardMsgList || forwardMsgList.length === 0) {
@@ -410,7 +410,7 @@ export async function sendImagesInBatches(e, forwardMsgList, batchThreshold = 50
             }
             results.push(result);
             return {
-                success: result && result.message_id,
+                success: isReplySuccess(result),
                 results
             };
         } catch (error) {
@@ -439,7 +439,7 @@ export async function sendImagesInBatches(e, forwardMsgList, batchThreshold = 50
             }
             results.push(result);
 
-            if (!result || !result.message_id) {
+            if (!isReplySuccess(result)) {
                 allSuccess = false;
                 logger.warn(`[R插件][分批发送] 第${batchNum}/${totalBatches}批发送失败`);
             }
@@ -450,7 +450,7 @@ export async function sendImagesInBatches(e, forwardMsgList, batchThreshold = 50
         }
     }
 
-    logger.info(`[R插件][分批发送] 完成，成功${results.filter(r => r && r.message_id).length}/${totalBatches}批`);
+    logger.info(`[R插件][分批发送] 完成，成功${results.filter(isReplySuccess).length}/${totalBatches}批`);
 
     return { success: allSuccess, results };
 }

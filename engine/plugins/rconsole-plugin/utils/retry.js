@@ -8,6 +8,12 @@ let processedMediaCount = 0;
 // 记录下载的临时文件，用于清理
 let downloadedTempFiles = [];
 
+// QQ Official's AstrBot send coroutine has no message ID return value. The
+// host adds this marker only after send completes; it is not a QQ message ID.
+export function isReplySuccess(result) {
+    return Boolean(result && (result.message_id || result.rconsole_official_sent === true));
+}
+
 /**
  * 通用的reply包装函数，自动retry失败的图片发送
  * 
@@ -22,7 +28,7 @@ export async function replyWithRetry(e, Bot, message, ...args) {
     const result = await e.reply(message, ...args);
 
     // 如果成功，直接返回
-    if (result && result.message_id) {
+    if (isReplySuccess(result)) {
         return result;
     }
 

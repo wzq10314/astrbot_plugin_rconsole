@@ -4,11 +4,12 @@
 
 **把 R-plugin 的视频、音乐、图文和工具带到 AstrBot**
 
-![版本](https://img.shields.io/badge/version-1.0.4-blue)
+![版本](https://img.shields.io/badge/version-1.0.6-blue)
 ![AstrBot](https://img.shields.io/badge/AstrBot-4.28.1%2B-purple)
 ![Python](https://img.shields.io/badge/Python-3.12-blue)
 ![Node](https://img.shields.io/badge/Node.js-22%2B-green)
 ![OneBot](https://img.shields.io/badge/OneBot11-NapCat-orange)
+![QQ官方](https://img.shields.io/badge/QQ官方-群聊%20%2F%20C2C-blue)
 ![许可](https://img.shields.io/badge/license-MulanPSL--2.0-green)
 ![浏览量](https://visitor-badge.laobi.icu/badge?page_id=wzq10314.astrbot_plugin_rconsole)
 ![Stars](https://img.shields.io/github/stars/wzq10314/astrbot_plugin_rconsole?style=social)
@@ -20,11 +21,15 @@
 
 浏览量徽章是第三方计数，不等同于 GitHub 官方独立访客数。
 
-本项目是 [R-console / R-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 的 AstrBot 适配版，由 **wzq10314** 维护。1.0.4 将原版协议核心随插件打包，通过 Python 适配 AstrBot 的消息、权限、配置与 AI 服务。**不需要安装 Yunzai 或 Redis，但完整功能需要 Node.js。**
+本项目是 [R-console / R-plugin](https://gitee.com/kyrzy0416/rconsole-plugin) 的 AstrBot 适配版，由 **wzq10314** 维护。v1.0.6 将原版协议核心随插件打包，通过 Python 适配 AstrBot 的消息、权限、配置与 AI 服务，并支持 QQ 官方群聊和 C2C 私聊。**不需要安装 Yunzai 或 Redis，但完整功能需要 Node.js。**
 
 原版的 6 类应用、53 条命令路由已纳入适配范围。这表示代码和入口已接入，不代表所有第三方接口、地区网络和账号权益均已在线验证，具体见[功能对照表](FEATURE_MATRIX.md)。
 
 ## 功能
+
+支持 OneBot11/NapCat、`qq_official` 和 `qq_official_webhook`。QQ 官方通过 AstrBot 发送已验证的图片、视频、音频和文件，实际可用媒体及大小受平台权限限制；图文卡片可配合 `astrbot_plugin_official_cards`。原版 OneBot 音乐分享卡在官方平台不可用，可使用音频或文件发送。
+
+QQ 官方引用操作只能使用事件自带的被引用内容或本人的点歌缓存，不能读取任意聊天记录。官方账号状态按平台和机器人隔离；登录仍须管理员私聊，媒体发送失败会如实报错。v1.0.6 对底层真实发送回执进行确认，避免外层无返回值导致重复发送。
 
 | 类别 | 内容 |
 | --- | --- |

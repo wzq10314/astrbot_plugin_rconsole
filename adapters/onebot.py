@@ -2,6 +2,7 @@ import asyncio
 import base64
 from pathlib import Path
 from ..services.models import MediaError
+from .official import is_official, send_file, hint
 
 
 class OneBotSender:
@@ -10,9 +11,14 @@ class OneBotSender:
         self.event, self.timeout = event, timeout
 
     async def text(self, message: str):
+        if is_official(self.event):
+            hint(self.event)
         await self.event.send(self.event.plain_result(message))
 
     async def file(self, path: Path, kind: str):
+        if is_official(self.event):
+            async with asyncio.timeout(self.timeout):
+                return await send_file(self.event, path, kind)
         if self.event.get_platform_name() != 'aiocqhttp' or not hasattr(self.event, 'bot'):
             raise MediaError('媒体发送目前仅支持 OneBot11/NapCat。')
         encoded = await asyncio.to_thread(lambda: base64.b64encode(path.read_bytes()).decode('ascii'))

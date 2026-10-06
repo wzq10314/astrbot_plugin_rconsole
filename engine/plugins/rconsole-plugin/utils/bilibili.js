@@ -2,6 +2,7 @@ import axios from 'axios'
 import { exec, spawn } from "../../../safe-process.mjs";
 import child_process from "../../../safe-process.mjs"
 import fs from "node:fs";
+import { pipeline } from "node:stream/promises";
 import path from "path";
 import qrcode from "qrcode"
 import util from "util";
@@ -154,31 +155,24 @@ async function normalDownloadBFile(url, fullFileName, progressCallback) {
                         ...BILI_HEADER
                     },
                 })
-                .then(({ data, headers }) => {
+                .then(async ({ data, headers }) => {
                     let currentLen = 0;
                     const totalLen = headers['content-length'];
 
-                    return new Promise((resolve, reject) => {
-                        data.on('data', ({ length }) => {
-                            currentLen += length;
-                            progressCallback?.(currentLen / totalLen);
-                        });
-
-                        data.on('error', reject);
-
-                        data.pipe(
-                            fs.createWriteStream(fullFileName).on('finish', () => {
-                                const duration = ((Date.now() - startTime) / 1000).toFixed(2);
-                                const sizeMB = (totalLen / 1024 / 1024).toFixed(2);
-                                const speed = (sizeMB / duration).toFixed(2);
-                                logger.info(`[R插件][下载完成] CDN: ${cdnHost}, 大小: ${sizeMB}MB, 用时: ${duration}s, 速度: ${speed}MB/s`);
-                                resolve({
-                                    fullFileName,
-                                    totalLen,
-                                });
-                            }).on('error', reject),
-                        );
+                    data.on('data', ({ length }) => {
+                        currentLen += length;
+                        progressCallback?.(currentLen / totalLen);
                     });
+
+                    await pipeline(data, fs.createWriteStream(fullFileName));
+                    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+                    const sizeMB = (totalLen / 1024 / 1024).toFixed(2);
+                    const speed = (sizeMB / duration).toFixed(2);
+                    logger.info(`[R插件][下载完成] CDN: ${cdnHost}, 大小: ${sizeMB}MB, 用时: ${duration}s, 速度: ${speed}MB/s`);
+                    return {
+                        fullFileName,
+                        totalLen,
+                    };
                 });
         } catch (err) {
             if (retry < maxRetries) {
@@ -927,24 +921,19 @@ export async function m4sToMp3(m4sUrl, path) {
                 fs.unlinkSync(path);
             }
             // 开始下载
-            const fileStream = fs.createWriteStream(path);
-            res.data.pipe(fileStream);
-            // 下载完成
-            return new Promise((resolve, reject) => {
-                fileStream.on("finish", () => {
-                    fileStream.close(() => {
-                        const transformCmd = `ffmpeg -i ${path} ${path.replace(".m4s", ".mp3")} -y -loglevel quiet`;
-                        child_process.execSync(transformCmd)
-                        logger.mark("bili: mp3下载完成")
-                        resolve(path);
-                    });
+            try {
+                await pipeline(res.data, fs.createWriteStream(path));
+            } catch (err) {
+                await new Promise(resolve => {
+                    fs.unlink(path, () => resolve());
                 });
-                fileStream.on("error", err => {
-                    fs.unlink(path, () => {
-                        reject(err);
-                    });
-                });
-            });
+                throw err;
+            }
+            // 下载完成且文件流已关闭
+            const transformCmd = `ffmpeg -i ${path} ${path.replace(".m4s", ".mp3")} -y -loglevel quiet`;
+            child_process.execSync(transformCmd)
+            logger.mark("bili: mp3下载完成")
+            return path;
         });
 }
 

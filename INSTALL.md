@@ -1,6 +1,8 @@
 # 安装与升级 RConsole 1.0.3
 
-适用于 AstrBot 4.28.1、Python 3.12、OneBot11 / NapCat；以下沿用你的容器名 `astrbot`。
+适用于 AstrBot 4.28.1、Python 3.12、OneBot11/NapCat，以及 `qq_official`、`qq_official_webhook` 的群聊和 C2C 私聊；以下沿用你的容器名 `astrbot`。
+
+QQ 官方媒体依赖当前 AstrBot 适配器和平台权限；图文卡片可配合 `astrbot_plugin_official_cards`。音乐分享卡可改为音频或文件发送，引用操作需要事件提供被引用内容。官方账号的缓存与状态独立保存在插件数据目录的 `official` 子目录。
 
 ## 1. 放入完整插件
 

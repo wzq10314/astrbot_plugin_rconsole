@@ -4,6 +4,7 @@ import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import YAML from 'yaml';
 import {installNetwork} from './network.mjs';
+import {createDiagnostics,installFetchDiagnostics,safeError} from './diagnostics.mjs';
 import renderer from './lib/puppeteer/puppeteer.js';
 
 const output=process.stdout.write.bind(process.stdout);
@@ -14,6 +15,10 @@ globalThis.logger=new Proxy({}, {get:()=>silent});
 for(const k of ['log','info','warn','error','debug','trace']) console[k]=silent;
 let serial=0;
 const pending=new Map(),background=new Set(),intervals=new Set();
+const diagnostics=createDiagnostics({emit,counters:()=>({
+ requests:globalThis.rc?.requests||0,children:globalThis.rc?.children||0,
+ background:background.size,intervals:intervals.size
+})});
 function track(promise){
  background.add(promise);promise.finally(()=>background.delete(promise)).catch(silent);return promise;
 }
@@ -36,12 +41,17 @@ const initial=await first;
 const root=path.dirname(fileURLToPath(import.meta.url));
 const work=path.resolve(initial.work);fs.mkdirSync(work,{recursive:true});process.chdir(work);
 globalThis.rc={work,root,call,track,requests:0,children:0,config:initial.config,ignoreSchedule:silent};
-installNetwork(initial.config);
+installNetwork(initial.config,diagnostics);
+installFetchDiagnostics(diagnostics);
 const timer=setInterval;
 const clear=clearInterval;
+let diagnosticStage='worker';
+// Use the native timer so diagnostics never keep the upstream idle loop alive.
+const diagnosticTimer=timer(()=>diagnostics.snapshot(diagnosticStage),10000);
+diagnosticTimer.unref();
 globalThis.setInterval=(fn,ms,...args)=>{
  let running=false;
- const handle=timer(async()=>{if(running)return;running=true;try{await fn(...args)}catch{emit({op:'diagnostic',data:{type:'PollingError'}})}finally{running=false}},ms);
+ const handle=timer(async()=>{if(running)return;running=true;try{await fn(...args)}catch(error){diagnostics.record({stage:'idle',event:'error',error:safeError(error)})}finally{running=false}},ms);
  intervals.add(handle);return handle;
 };
 globalThis.clearInterval=handle=>{intervals.delete(handle);clear(handle)};
@@ -64,34 +74,46 @@ const e={...msg,bot:Bot,reply:(message)=>call('reply',{message}),
  group:{sendFile:upload,fs:{upload}},friend:{sendFile:upload},
  runtime:{common:{makeForwardMsg:async(_e,rows)=>Bot.makeForwardMsg(rows)}},
  getReply:()=>call('get_reply',{}),getReplyMsg:()=>call('get_reply',{})};
+const workerSpan=diagnostics.begin('worker');
 try {
- const entries=[];
+ const entries=[],methodNames=new Map();
  for(const [file,key] of [['help','help'],['query','query'],['songRequest','songRequest'],['switchers','switchers'],['tools','tools'],['update','Update']]) {
   const module=await import(`./plugins/rconsole-plugin/apps/${file}.js`);
   const app=new module[key]();app.e=e;
+  const names=new Map();methodNames.set(file,names);
   for(const name of Object.getOwnPropertyNames(Object.getPrototypeOf(app))){
    const original=app[name];
-   if(typeof original==='function'&&original.constructor.name==='AsyncFunction')
-    app[name]=(...args)=>track(original.apply(app,args));
+   if(typeof original==='function'&&original.constructor.name==='AsyncFunction'){
+    const diagnosticName=diagnostics.registerMethod(file,name);names.set(name,diagnosticName);
+    app[name]=(...args)=>track(diagnostics.run('method',{name:diagnosticName},()=>original.apply(app,args)));
+   }
   }
   entries.push([file,app]);
  }
  // Replace the generic summary path with AstrBot's selected model and bounded public fetch.
  const tool=entries.find(([name])=>name==='tools')[1];
  if(!initial.config.aiBaseURL||!initial.config.aiApiKey)
-  tool._generalLinkShareSummary=async(_e,url)=>{await e.reply('正在读取文章并总结…');return e.reply(await call('summarize',{url}))};
+  tool._generalLinkShareSummary=(_e,url)=>track(diagnostics.run('method',
+   {name:methodNames.get('tools').get('_generalLinkShareSummary')},
+   async()=>{await e.reply('正在读取文章并总结…');return e.reply(await call('summarize',{url}))}));
  if(initial.inventory){emit({op:'inventory',data:entries.flatMap(([app,obj])=>obj.rule.map(r=>({app,...r})))})}
  else {
   const entry=entries.find(([name])=>name===initial.route.app);
   const rule=entry?.[1].rule.find(r=>r.fnc===initial.route.fnc);
   if(!rule || (rule.permission==='master'&&!e.isMaster)) throw Error('PermissionError');
-  await entry[1][rule.fnc](e);
+  diagnosticStage='route';
+  await diagnostics.run('route',{name:methodNames.get(entry[0]).get(rule.fnc)},()=>entry[1][rule.fnc](e));
  }
  // Upstream QR methods create timers; wait for both their polling and un-awaited replies.
+ diagnosticStage='idle';
+ const idleSpan=diagnostics.begin('idle');
  let quiet=0;
  while(quiet<5){
   await new Promise(resolve=>setTimeout(resolve,100));
   quiet=(intervals.size||background.size||rc.requests||rc.children)?0:quiet+1;
  }
- await renderer.shutdown();emit({op:'done'});process.exit(0);
-}catch(error){emit({op:'fatal',data:{type:error?.code||error?.name||'Error'}});process.exit(1)}
+ idleSpan.end();diagnosticStage='shutdown';
+ await diagnostics.run('shutdown',{},()=>renderer.shutdown());
+ workerSpan.end();diagnostics.snapshot('worker');clear(diagnosticTimer);
+ emit({op:'done'});process.exit(0);
+}catch(error){workerSpan.error(error);diagnostics.snapshot(diagnosticStage);clear(diagnosticTimer);emit({op:'fatal',data:{type:safeError(error)}});process.exit(1)}

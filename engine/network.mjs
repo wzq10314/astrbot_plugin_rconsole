@@ -5,12 +5,13 @@ import dns from 'node:dns';
 import net from 'node:net';
 import {urlToHttpOptions} from 'node:url';
 import {syncBuiltinESMExports} from 'node:module';
+import {errorMonitor} from 'node:events';
 import ipaddr from 'ipaddr.js';
 import axios from 'axios';
 function publicAddress(ip){
  try {let value=ipaddr.parse(ip);if(value.kind()==='ipv6'&&value.isIPv4MappedAddress())value=value.toIPv4Address();return value.range()==='unicast'}catch{return false}
 }
-export function installNetwork(config){
+export function installNetwork(config,diagnostics){
  const trusted=new Set();
  for(const key of ['neteaseCloudAPIServer','kugouApiServer','aiBaseURL']) {
   if(config[key])try{trusted.add(new URL(config[key]).host)}catch{}
@@ -27,6 +28,8 @@ export function installNetwork(config){
     else if(typeof options==='function')callback=options;
    }else{opts={...input};if(typeof options==='function')callback=options;}
    const host=String(opts.hostname||opts.host||'').replace(/^\[|\]$/g,'');
+   const span=diagnostics?.begin('network',{host,name:typeof opts.method==='string'?opts.method.toUpperCase():'GET'});
+   try {
    const port=String(opts.port||(protocol==='https:'?443:80));
    const allowed=trusted.has(`${host}:${port}`)||trusted.has(host);
    if(!allowed){
@@ -42,6 +45,18 @@ export function installNetwork(config){
     };
    }
    const req=original.call(this,opts,callback);
+   if(span){
+    // errorMonitor observes response errors without swallowing an unhandled error.
+    req.once(errorMonitor,error=>span.error(error));
+    req.once('close',()=>span.end());
+    req.on('timeout',()=>span.timeout());
+    req.once('response',response=>{
+     span.headers(response.statusCode);
+     response.once(errorMonitor,error=>span.error(error));
+     response.once('aborted',()=>span.error({name:'AbortError'}));
+     response.once('end',()=>span.end());response.once('close',()=>span.end());
+    });
+   }
    if(globalThis.rc){
     rc.requests++;
     let ended=false;
@@ -50,6 +65,7 @@ export function installNetwork(config){
     req.once('response',response=>{response.once('end',finish);response.once('close',finish)});
    }
    return req;
+   }catch(error){span?.error(error);throw error}
   };
   mod.get=function(...args){const req=mod.request(...args);req.end();return req};
  }

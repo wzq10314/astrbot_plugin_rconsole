@@ -14,6 +14,7 @@ from .core.permission import is_admin
 from .modules import help, query, status, tools
 from .utils.config import load_config
 from .adapters.onebot import OneBotSender
+from .adapters.official import PLATFORMS as OFFICIAL_PLATFORMS
 from .services.media import EXPLICIT_PATTERN, event_text, extract_url, identify_url
 from .services.models import MediaError
 from .services.pipeline import parse_and_send
@@ -25,7 +26,7 @@ from .services.engine import ENGINE
 from .services.webpage import webpage_url, screenshot_and_send
 
 
-@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.4")
+@register("astrbot_plugin_rconsole", "wzq10314", "RConsole 全功能核心 AstrBot 适配版", "1.0.6")
 class RConsolePlugin(Star):
     def __init__(self, context: Context, config: AstrBotConfig):
         super().__init__(context)
@@ -85,10 +86,12 @@ class RConsolePlugin(Star):
 
     async def clean_engine_cache(self):
         if self.engine.lock.locked(): return
-        root = (self.engine.data / 'runtime').resolve()
-        if not root.exists(): return
-        for item in root.rglob('*'):
-            if item.is_file() and not item.is_symlink(): item.unlink(missing_ok=True)
+        data_root = self.engine.data.resolve()
+        roots = [data_root / 'runtime', *(data_root / 'official').glob('*/runtime')]
+        for root in roots:
+            if not root.exists() or not root.resolve().is_relative_to(data_root): continue
+            for item in root.rglob('*'):
+                if item.is_file() and not item.is_symlink(): item.unlink(missing_ok=True)
 
     async def terminate(self):
         if self.scheduler:
@@ -167,7 +170,7 @@ class RConsolePlugin(Star):
 
     @filter.event_message_type(filter.EventMessageType.ALL)
     async def on_media(self, event: AstrMessageEvent):
-        if event.get_platform_name() != 'aiocqhttp':
+        if event.get_platform_name() not in {'aiocqhttp', *OFFICIAL_PLATFORMS}:
             return
         text = event_text(event).strip()
         # The tools URL inspection command must not also trigger a download.

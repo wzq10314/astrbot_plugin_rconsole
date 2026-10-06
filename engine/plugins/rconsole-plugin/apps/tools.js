@@ -5,6 +5,7 @@ import _ from "lodash";
 import fetch from "node-fetch";
 import { Buffer } from 'node:buffer';
 import fs from "node:fs";
+import { pipeline } from "node:stream/promises";
 import PQueue from 'p-queue';
 import path from "path";
 import qrcode from "qrcode";
@@ -40,7 +41,7 @@ const releaseTwitterCycleTls = async () => {
 
 import puppeteer from "../../../lib/puppeteer/puppeteer.js";
 import VideoCard from '../model/video-card.js';
-import { replyWithRetry } from "../utils/retry.js";
+import { replyWithRetry, isReplySuccess } from "../utils/retry.js";
 import {
     BILI_CDN_SELECT_LIST,
     BILI_DEFAULT_INTRO_LEN_LIMIT,
@@ -794,6 +795,7 @@ export class tools extends plugin {
             }
             logger.error(err);
             logger.mark(`Cookie 过期或者 Cookie 没有填写，请参考\n${HELP_DOC}\n尝试无效后可以到官方QQ群[575663150]提出 bug 等待解决`);
+            await e.reply("本次抖音内容未能处理完成，接口请求、视频下载或发送失败。请稍后再试。");
         }
         return true;
     }
@@ -6024,17 +6026,11 @@ export class tools extends plugin {
                         };
 
                         const res = await axios.get(url, partAxiosConfig);
-                        return new Promise((resolve, reject) => {
-                            const partPath = `${target}.part${partIndex}`;
-                            logger.mark(`[R插件][视频下载引擎] 正在下载 part${partIndex}`);
-                            const writer = fs.createWriteStream(partPath);
-                            res.data.pipe(writer);
-                            writer.on("finish", () => {
-                                logger.mark(`[R插件][视频下载引擎] part${partIndex} 下载完成`);
-                                resolve(partPath);
-                            });
-                            writer.on("error", reject);
-                        });
+                        const partPath = `${target}.part${partIndex}`;
+                        logger.mark(`[R插件][视频下载引擎] 正在下载 part${partIndex}`);
+                        await pipeline(res.data, fs.createWriteStream(partPath));
+                        logger.mark(`[R插件][视频下载引擎] part${partIndex} 下载完成`);
+                        return partPath;
                     } catch (err) {
                         if (retry < maxRetries) {
                             logger.warn(`[R插件][视频下载] part${partIndex} 下载失败，重试中... (${retry + 1}/${maxRetries}): ${err.message}`);
@@ -6232,13 +6228,8 @@ export class tools extends plugin {
 
                 const res = await axios.get(url, axiosConfig);
                 logger.mark(`开始下载: ${url}`);
-                const writer = fs.createWriteStream(target);
-                res.data.pipe(writer);
-
-                return await new Promise((resolve, reject) => {
-                    writer.on("finish", () => resolve(target));
-                    writer.on("error", reject);
-                });
+                await pipeline(res.data, fs.createWriteStream(target));
+                return target;
             } catch (err) {
                 if (retry < maxRetries) {
                     logger.warn(`[R插件][视频下载] 下载失败，重试中... (${retry + 1}/${maxRetries}): ${err.message}`);
@@ -6331,7 +6322,7 @@ export class tools extends plugin {
                 // 使用 replyWithRetry 包装视频发送，自动处理重发
                 const result = await replyWithRetry(e, Bot, segment.video(path));
                 // 发送成功后删除原文件
-                if (result && result.message_id) {
+                if (isReplySuccess(result)) {
                     await checkAndRemoveFile(path);
                     // 同时清理可能生成的 retry 文件
                     const retryPath = path.replace(/(\.\w+)$/, '_retry$1');

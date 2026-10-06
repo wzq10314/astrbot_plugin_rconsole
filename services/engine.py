@@ -12,10 +12,13 @@ import shutil
 import signal
 import time
 from urllib.parse import urlsplit
+from astrbot.api import logger
 
 from .models import MediaError
+from .engine_trace import EngineTrace
 from ..utils.http import PublicHTTP
 from ..core.permission import is_admin
+from ..adapters.official import is_official, state_namespace, event_segments, quoted_message, send_segments
 
 ROOT = Path(__file__).resolve().parents[1]
 ENGINE = ROOT / 'engine'
@@ -124,17 +127,19 @@ class EngineHost:
             self.recent[key] = now
             if len(self.recent)>1024: self.recent.pop(next(iter(self.recent)))
             self.data.mkdir(parents=True, exist_ok=True)
-            work = self.data / 'runtime'; work.mkdir(exist_ok=True)
+            namespace = state_namespace(event)
+            state_root = self.data / 'official' / namespace if namespace else self.data
+            state_root.mkdir(parents=True, exist_ok=True)
+            work = state_root / 'runtime'; work.mkdir(exist_ok=True)
+            if namespace:
+                config['defaultPath'] = (work / 'data/rcmp4').as_posix() + '/'
             (work/'data/rcmp4').mkdir(parents=True,exist_ok=True)
-            self.state_path = self.data / 'engine-state.json'
+            self.state_path = state_root / 'engine-state.json'
             try: self.state = json.loads(self.state_path.read_text(encoding='utf-8'))
             except FileNotFoundError: self.state = {}
             except (ValueError, OSError): raise MediaError('插件状态文件损坏或不可读，请检查 engine-state.json 备份。') from None
             self.event = event; self.sent = 0; self.bytes_sent = 0
-            raw = getattr(event.message_obj, 'raw_message', {})
-            if not isinstance(raw, dict): raw = {}
-            message = raw.get('message', [])
-            normalized = [{**s.get('data', {}), 'type': s.get('type')} for s in message if isinstance(s, dict)]
+            normalized = event_segments(event)
             payload = {'start': True, 'route': route, 'config': config, 'work': str(work), 'event': {
                 'msg': text, 'message': normalized, 'user_id': str(event.get_sender_id()),
                 'group_id': str(event.get_group_id()) if event.get_group_id() else None,
@@ -150,24 +155,38 @@ class EngineHost:
                 limit=96*1024*1024, start_new_session=os.name!='nt', cwd=work)
             watchdog=asyncio.create_task(self.watch_disk(work))
             done=False
+            trace=EngineTrace(logger,route.get('fnc'),self.plugin.settings.get('engine_timeout',300))
+            outcome='error'
             try:
                 await self.write(payload)
                 async with asyncio.timeout(self.plugin.settings.get('engine_timeout',300)):
                     while line:=await self.process.stdout.readline():
                         packet=json.loads(line)
                         op=packet.get('op')
+                        if op=='diagnostic':
+                            trace.record(packet.get('data'));continue
                         if op=='done': done=True;break
                         if op=='fatal':
                             raise MediaError('解析核心运行失败（'+str(packet.get('data',{}).get('type','Error'))+'），请运行 #rtools engine 检查依赖。')
                         if not packet.get('id'): continue
+                        trace.rpc_begin(op)
                         try: result=await self.handle(op,packet.get('data') or {})
+                        except asyncio.CancelledError:
+                            raise
                         except Exception as exc:
                             error=str(exc) if isinstance(exc,MediaError) else 'AstrBot 适配操作失败（'+type(exc).__name__+'）'
                             await self.write({'id':packet['id'],'error':redact(error,self.plugin.settings)})
                         else: await self.write({'id':packet['id'],'result':result})
+                        trace.rpc_end()
                     if not done: raise MediaError('解析进程提前退出，请检查依赖、下载大小和运行内存。')
                 if self.sent==0: raise MediaError('原版核心没有返回可发送内容，请检查该功能开关、Cookie 或接口状态。')
+                outcome='done'
+            except TimeoutError:
+                outcome='timeout';raise
+            except asyncio.CancelledError:
+                outcome='cancelled';raise
             finally:
+                trace.finish(outcome)
                 watchdog.cancel();await asyncio.gather(watchdog,return_exceptions=True)
                 await self.close()
             return True
@@ -240,6 +259,8 @@ class EngineHost:
         if op=='reply': return await self.reply(data)
         if op=='upload': return await self.upload(data['file'])
         if op=='get_reply':
+            if is_official(self.event):
+                return quoted_message(self.event)
             raw=getattr(self.event.message_obj,'raw_message',{})
             reply=next((s for s in raw.get('message',[]) if s.get('type')=='reply'),{})
             if not reply: raise MediaError('请回复一条消息再使用此命令。')
@@ -247,7 +268,13 @@ class EngineHost:
             return result.get('data',result)
         if op=='onebot':
             action=data['action'];params=data.get('params',{})
-            if action in {'send_group_msg','send_private_msg'}: return {'data':await self.reply({'message':params.get('message')})}
+            if action in {'send_group_msg','send_private_msg'}:
+                return {'data':await self.reply({'message':params.get('message'),
+                    'private': is_official(self.event) and action == 'send_private_msg'})}
+            if is_official(self.event):
+                if action == 'get_msg':
+                    return {'data': quoted_message(self.event, params.get('message_id'))}
+                raise MediaError('QQ 官方接口不提供此 OneBot 能力（群历史、群文件列表或协议端状态）。请直接发送链接或文件内容。')
             if action not in {'get_msg','get_group_msg_history','get_group_file_url','get_login_info','get_status','get_version_info'}:
                 raise MediaError('此 OneBot 操作没有映射。')
             if 'group_id' in params: params['group_id']=self.event.get_group_id()
@@ -334,6 +361,14 @@ class EngineHost:
         return [{'type':kind,'data':data}]
 
     async def reply(self,data):
+        if is_official(self.event):
+            if data.get('private') and not self.event.is_private_chat():
+                raise MediaError('此结果必须私聊获取，请到机器人私聊执行；不会改发群聊。')
+            if self.sent >= 60:
+                raise MediaError('单次消息数量超过上限。')
+            result = await send_segments(self.event, await self.segments(data.get('message', '')))
+            self.sent += 1
+            return result
         self.sent+=1
         if self.sent>60: raise MediaError('单次消息数量超过上限。')
         segments=await self.segments(data.get('message',''))
@@ -347,6 +382,13 @@ class EngineHost:
         return result.get('data',result)
 
     async def upload(self,file):
+        if is_official(self.event):
+            if self.sent >= 60:
+                raise MediaError('单次消息数量超过上限。')
+            result = await send_segments(self.event, [{'type':'file', 'data':{
+                'file':await self.local_file(file), 'name':Path(file).name}}])
+            self.sent += 1
+            return result
         private=self.event.is_private_chat()
         target={'user_id':self.event.get_sender_id()} if private else {'group_id':self.event.get_group_id()}
         result=await self.event.bot.call_action('upload_private_file' if private else 'upload_group_file',
